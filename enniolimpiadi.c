@@ -1,10 +1,14 @@
 #include "arena.h"
 #include "core.h"
+#include "string.c"
+#include "arena.c"
+#include "players.c"
+
 #define CLAY_IMPLEMENTATION
 #include "clay.h"
 #include "raylib/clay_renderer_raylib.c"
-#include "clay-video-demo.c"
-#include "arena.c"
+#include "layout.c"
+
 
 // This function is new since the video was published
 void HandleClayErrors(Clay_ErrorData errorData)
@@ -26,16 +30,44 @@ int main(void)
        .height = GetScreenHeight()
     }, (Clay_ErrorHandler) { HandleClayErrors });
 
-    Font fonts[1];
+    Font fonts[2];
     fonts[FONT_ID_BODY_16] = LoadFontEx("resources/Roboto-Regular.ttf", 48, 0, 400);
+    fonts[FONT_ID_ORIENTAL_CHICKEN] = LoadFontEx("resources/Oriental-Chicken.ttf", 48, 0, 400);
     SetTextureFilter(fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
     Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
     Clay_SetDebugModeEnabled(true);
 
+    Arena *arena = arena_alloc(MegaByte(1));
+
+    EntityList players = entity_list_init(arena, 64);
+    EntityList tournaments = entity_list_init(arena, 64);
+
+    String8 aldo     = str8_lit("Aldo");
+    String8 giovanni = str8_lit("Giovanni");
+    String8 giacomo  = str8_lit("Giacomo");
+
+    String8 pingpong    = str8_lit("Ping Pong");
+    String8 machiavelli = str8_lit("Machiavelli");
+    String8 freccette   = str8_lit("Freccette");
+
+    entity_list_add(&players, aldo);
+    entity_list_add(&players, giovanni);
+    entity_list_add(&players, giacomo);
+
+    entity_list_add(&tournaments, pingpong);
+    entity_list_add(&tournaments, machiavelli);
+    entity_list_add(&tournaments, freccette);
+
+    entity_list_register(&players, &tournaments, aldo, pingpong);
+
+
+    // Initialization of global data
     data.frameArena = arena_alloc(MegaByte(1));
     data.selectedHeaderButton = 0;
     data.yOffset = 0;
+    data.players = players;
+    data.tournaments = tournaments;
 
     // ClayVideoDemo_Data data = ClayVideoDemo_Initialize();
 

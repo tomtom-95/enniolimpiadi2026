@@ -22,6 +22,7 @@ String8 str8_copy(Arena *arena, String8 s);
 bool str8_cmp(String8 s1, String8 s2);
 
 String8 str8_cstr(char *c);
+String8 str8_u32(Arena *arena, u32 num);
 
 u64 cstr8_len(u8 *c);
 

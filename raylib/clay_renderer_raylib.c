@@ -131,7 +131,7 @@ Raylib_MeasureText(Clay_StringSlice text, Clay_TextElementConfig *config, void *
 void Clay_Raylib_Initialize(int width, int height, const char *title, unsigned int flags) {
     SetConfigFlags(flags);
     InitWindow(width, height, title);
-//    EnableEventWaiting();
+    EnableEventWaiting();
 }
 
 // A MALLOC'd buffer, that we keep modifying inorder to save from so many Malloc and Free Calls.

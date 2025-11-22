@@ -59,3 +59,40 @@ str8_cmp(String8 s1, String8 s2)
 {
     return s1.len == s2.len && MemoryMatch(s1.str, s2.str, s1.len);
 }
+
+String8
+str8_u32(Arena *arena, u32 num)
+{
+    String8 result;
+
+    // Handle 0 specially
+    if (num == 0)
+    {
+        result.len = 1;
+        result.str = push_array(arena, u8, 1);
+        result.str[0] = '0';
+        return result;
+    }
+
+    // Calculate number of digits
+    u32 temp = num;
+    u64 len = 0;
+    while (temp > 0)
+    {
+        temp /= 10;
+        len++;
+    }
+
+    // Allocate memory
+    result.len = len;
+    result.str = push_array(arena, u8, len);
+
+    // Fill in digits from right to left
+    for (u64 i = len; i > 0; i--)
+    {
+        result.str[i - 1] = '0' + (num % 10);
+        num /= 10;
+    }
+
+    return result;
+}

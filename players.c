@@ -64,7 +64,7 @@ entity_list_find(EntityList *entity_list, String8 name)
 {
     u32 idx_tail = entity_list->len + 1;
 
-    u32 idx = (entity_list->entities)->nxt;
+    u32 idx = entity_list->entities->nxt;
     while (idx != idx_tail)
     {
         Entity *entity = entity_list->entities + idx;
@@ -77,6 +77,22 @@ entity_list_find(EntityList *entity_list, String8 name)
     }
 
     return idx;
+}
+
+u32
+entity_list_count(EntityList *list)
+{
+    u32 idx_tail = list->len + 1;
+    u32 idx = list->entities->nxt;
+
+    u32 count = 0;
+    while (idx != idx_tail)
+    {
+        idx = (list->entities + idx)->nxt;
+        ++count;
+    }
+
+    return count;
 }
 
 u32
