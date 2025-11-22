@@ -89,7 +89,9 @@ typedef double   f64;
 #define Max(A,B) (((A)>(B))?(A):(B))
 #define ClampTop(A,X) Min(A,X)
 #define ClampBot(X,B) Max(X,B)
-#define Clamp(A,X,B) (((X)<(A))?(A):((X)>(B))?(B):(X))
+
+// TODO(tommaso): why raylib complains if this is not commented?
+// #define Clamp(A,X,B) (((X)<(A))?(A):((X)>(B))?(B):(X))
 
 ////////////////////////////////
 //~ rjf: Type -> Alignment

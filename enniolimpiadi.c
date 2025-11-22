@@ -1,7 +1,10 @@
+#include "arena.h"
+#include "core.h"
 #define CLAY_IMPLEMENTATION
-#include "./clay.h"
-#include "./raylib/clay_renderer_raylib.c"
-#include "./clay-video-demo.c"
+#include "clay.h"
+#include "raylib/clay_renderer_raylib.c"
+#include "clay-video-demo.c"
+#include "arena.c"
 
 // This function is new since the video was published
 void HandleClayErrors(Clay_ErrorData errorData)
@@ -28,7 +31,13 @@ int main(void)
     SetTextureFilter(fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
     Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
-    ClayVideoDemo_Data data = ClayVideoDemo_Initialize();
+    Clay_SetDebugModeEnabled(true);
+
+    data.frameArena = arena_alloc(MegaByte(1));
+    data.selectedHeaderButton = 0;
+    data.yOffset = 0;
+
+    // ClayVideoDemo_Data data = ClayVideoDemo_Initialize();
 
     while (!WindowShouldClose())
     {
@@ -49,7 +58,7 @@ int main(void)
             GetFrameTime()
         );
 
-        Clay_RenderCommandArray renderCommands = ClayVideoDemo_CreateLayout(&data);
+        Clay_RenderCommandArray renderCommands = ClayVideoDemo_CreateLayout();
 
         BeginDrawing();
         ClearBackground(BLACK);
