@@ -23,8 +23,9 @@ struct ClayVideoDemo_Data {
     Arena *frameArena;
     float yOffset;
 
-    s8 counterHeaderButton;
     Page selectedHeaderButton;
+
+    u8 selectedTournamentIdx;
 
     EntityList players;
     EntityList tournaments;

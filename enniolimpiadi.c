@@ -1,8 +1,10 @@
 #include "arena.h"
 #include "core.h"
+#include "raylib/raylib.h"
 #include "string.c"
 #include "arena.c"
 #include "players.c"
+#include "string.h"
 
 #define CLAY_IMPLEMENTATION
 #include "clay.h"
@@ -46,6 +48,11 @@ int main(void)
     String8 aldo     = str8_lit("Aldo");
     String8 giovanni = str8_lit("Giovanni");
     String8 giacomo  = str8_lit("Giacomo");
+    String8 lucia    = str8_lit("Lucia");
+    String8 antonia  = str8_lit("Antonia"); 
+    String8 tommaso  = str8_lit("Tommaso"); 
+    String8 emilia   = str8_lit("Emilia"); 
+    String8 maya     = str8_lit("Maya"); 
 
     String8 pingpong    = str8_lit("Ping Pong");
     String8 machiavelli = str8_lit("Machiavelli");
@@ -54,12 +61,24 @@ int main(void)
     entity_list_add(&players, aldo);
     entity_list_add(&players, giovanni);
     entity_list_add(&players, giacomo);
+    entity_list_add(&players, lucia);
+    entity_list_add(&players, antonia);
+    entity_list_add(&players, tommaso);
+    entity_list_add(&players, emilia);
+    entity_list_add(&players, maya);
 
     entity_list_add(&tournaments, pingpong);
     entity_list_add(&tournaments, machiavelli);
     entity_list_add(&tournaments, freccette);
 
     entity_list_register(&players, &tournaments, aldo, pingpong);
+    entity_list_register(&players, &tournaments, giovanni, pingpong);
+    entity_list_register(&players, &tournaments, giacomo, pingpong);
+    entity_list_register(&players, &tournaments, lucia, pingpong);
+    entity_list_register(&players, &tournaments, antonia, pingpong);
+    entity_list_register(&players, &tournaments, tommaso, pingpong);
+    entity_list_register(&players, &tournaments, emilia, pingpong);
+    entity_list_register(&players, &tournaments, maya, pingpong);
 
 
     // Initialization of global data
@@ -89,6 +108,15 @@ int main(void)
             (Clay_Vector2) { scrollDelta.x, scrollDelta.y },
             GetFrameTime()
         );
+
+        if (Clay_PointerOver(Clay_GetElementId(CLAY_STRING("GoBackWrapper"))))
+        {
+            SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+        }
+        else
+        {
+            SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        }
 
         Clay_RenderCommandArray renderCommands = ClayVideoDemo_CreateLayout();
 
