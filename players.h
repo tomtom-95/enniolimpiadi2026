@@ -10,6 +10,9 @@
 
 #define MAX_NUM_ENTITIES 64
 
+#define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
+#define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
+
 typedef struct Entity Entity;
 struct Entity {
     u32 nxt;

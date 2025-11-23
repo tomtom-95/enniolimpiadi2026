@@ -64,6 +64,7 @@ ClayVideoDemo_Data data = {0};
 void
 HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     Page page = (Page)userData;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.selectedHeaderButton = page;
@@ -73,6 +74,7 @@ HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 void
 HandleEventElementInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     u8 event_idx = (u8)userData;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.selectedTournamentIdx = event_idx;
@@ -82,6 +84,7 @@ HandleEventElementInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 void
 HandleGoBack(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.selectedTournamentIdx = 0;
     }
@@ -288,35 +291,154 @@ RenderEventsActionsButtons(void)
 }
 
 void
+RenderTournamentChart(u32 tournament_idx)
+{
+    CLAY(CLAY_ID("Tournament"), {
+        .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = layoutExpand,
+            .padding = { 16, 16, 0, 0 },
+            .childGap = 16,
+            .childAlignment = {
+                .y = CLAY_ALIGN_Y_TOP
+            }
+        },
+        .backgroundColor = COLOR_OFF_WHITE
+    }) {
+        CLAY(CLAY_ID("GoBackWrapper"), {
+            .layout = {
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)}
+            }
+        }) {
+            u32 dummy = 0;
+            Clay_OnHover(HandleGoBack, (intptr_t)dummy);
+            CLAY_TEXT(CLAY_STRING("<- Go back"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 18,
+                .textColor = stringColor
+            }));
+        }
+        CLAY(CLAY_ID("TournamentChart"), {
+            .layout = {
+                .sizing = layoutExpand,
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = COLOR_OFF_WHITE
+        }) {
+            // Get the number of players in the tournament
+            s32 _positions[64] = {0};
+            u32 num_players = find_all_filled_slots((data.tournaments.entities + tournament_idx)->registrations, _positions);
+
+            // Calculate number of rounds
+            u32 num_rounds = 0;
+            u32 temp = num_players;
+            while (temp > 1)
+            {
+                temp >>= 1;
+                num_rounds++;
+            }
+
+            // Create horizontal layout for rounds (left to right)
+            CLAY(CLAY_ID("RoundsContainer"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                    .childGap = 32,
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = COLOR_GREEN
+            }) {
+                for (u32 round = 0; round < num_rounds; round++) {
+                    u32 matches_in_round = num_players >> (round + 1);
+
+                    CLAY(CLAY_IDI("Round", round), {
+                        .layout = {
+                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_GROW(0) },
+                            .childGap = 16,
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                        }
+                    }) {
+                        // Matches in this round
+                        for (u32 match = 0; match < matches_in_round; match++)
+                        {
+                            CLAY(CLAY_IDI("Match", round * 100 + match), {
+                                .layout = {
+                                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                    .sizing = { .width = CLAY_SIZING_FIXED(200), .height = CLAY_SIZING_FIT(0) },
+                                    .padding = { 8, 8, 8, 8 },
+                                    .childGap = 4
+                                },
+                                .backgroundColor = COLOR_WHITE,
+                                .cornerRadius = CLAY_CORNER_RADIUS(5)
+                            }) {
+                                // For the first round, show actual player names
+                                if (round == 0)
+                                {
+                                    u32 player1_idx = _positions[match * 2];
+                                    u32 player2_idx = _positions[match * 2 + 1];
+
+                                    Entity *player1 = data.players.entities + BIT_TO_ENTITY_IDX(player1_idx);
+                                    Entity *player2 = data.players.entities + BIT_TO_ENTITY_IDX(player2_idx);
+
+                                    // Player 1
+                                    CLAY_TEXT(str8_to_clay(player1->name), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 16,
+                                        .textColor = stringColor
+                                    }));
+
+                                    // VS
+                                    CLAY_TEXT(CLAY_STRING("vs"), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 14,
+                                        .textColor = stringColor
+                                    }));
+
+                                    // Player 2
+                                    CLAY_TEXT(str8_to_clay(player2->name), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 16,
+                                        .textColor = stringColor
+                                    }));
+                                }
+                                else
+                                {
+                                    // For subsequent rounds, show TBD
+                                    CLAY_TEXT(CLAY_STRING("TBD"), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 16,
+                                        .textColor = stringColor
+                                    }));
+
+                                    CLAY_TEXT(CLAY_STRING("vs"), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 14,
+                                        .textColor = stringColor
+                                    }));
+
+                                    CLAY_TEXT(CLAY_STRING("TBD"), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 16,
+                                        .textColor = stringColor
+                                    }));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void
 RenderEvents(void)
 {
     if (data.selectedTournamentIdx != 0)
     {
-        CLAY(CLAY_ID("Tournament"), {
-            .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = layoutExpand,
-                .padding = { 16, 16, 0, 0 },
-                .childGap = 16,
-                .childAlignment = {
-                    .y = CLAY_ALIGN_Y_TOP
-                }
-            },
-            .backgroundColor = COLOR_OFF_WHITE
-        }) {
+        RenderTournamentChart(data.selectedTournamentIdx);
 
-            CLAY(CLAY_ID("GoBackWrapper"), {
-
-            }) {
-                u32 dummy = 0;
-                Clay_OnHover(HandleGoBack, (intptr_t)dummy);
-                CLAY_TEXT(CLAY_STRING("<- Go back"), CLAY_TEXT_CONFIG({
-                    .fontId = FONT_ID_BODY_16,
-                    .fontSize = 18,
-                    .textColor = stringColor
-                }));
-            }
-        }
     }
     else
     {
@@ -347,11 +469,9 @@ RenderEvents(void)
             u32 idx = (data.tournaments.entities)->nxt;
             while (idx != idx_tail)
             {
-                Clay_OnHover(HandleEventElementInteraction, (intptr_t)idx);
-
                 Entity *tournament = data.tournaments.entities + idx;
 
-                CLAY_AUTO_ID({
+                CLAY(CLAY_IDI("EventElement", idx), {
                     .layout = {
                         .layoutDirection = CLAY_LEFT_TO_RIGHT,
                         .sizing = {.height = CLAY_SIZING_FIT(0) , .width = CLAY_SIZING_GROW(0)},
@@ -359,8 +479,10 @@ RenderEvents(void)
                     },
                     .backgroundColor = Clay_Hovered() ? eventElementHoverColor : eventElementColor
                 }) {
+                    Clay_OnHover(HandleEventElementInteraction, (intptr_t)idx);
+
                     Clay_String event_string = str8_to_clay(tournament->name);
-                
+
                     // Render event name
                     RenderEventElement(event_string);
 

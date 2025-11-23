@@ -97,6 +97,8 @@ int main(void)
             .height = GetScreenHeight()
         });
 
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+
         Vector2 mousePosition = GetMousePosition();
         Vector2 scrollDelta = GetMouseWheelMoveV();
         Clay_SetPointerState(
@@ -108,15 +110,6 @@ int main(void)
             (Clay_Vector2) { scrollDelta.x, scrollDelta.y },
             GetFrameTime()
         );
-
-        if (Clay_PointerOver(Clay_GetElementId(CLAY_STRING("GoBackWrapper"))))
-        {
-            SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        }
-        else
-        {
-            SetMouseCursor(MOUSE_CURSOR_DEFAULT);
-        }
 
         Clay_RenderCommandArray renderCommands = ClayVideoDemo_CreateLayout();
 

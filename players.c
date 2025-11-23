@@ -5,9 +5,6 @@
 #include "string.h"
 #include "players.h"
 
-#define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
-#define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
-
 /**
  * Find all filled slots in a bitmap and store their positions.
  *
