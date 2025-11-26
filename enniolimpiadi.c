@@ -87,22 +87,23 @@ int main(void)
     entity_list_add(&tournaments, machiavelli);
     entity_list_add(&tournaments, freccette);
 
-    entity_list_register(&players, &tournaments, aldo, pingpong);
+    entity_list_register(&players, &tournaments, aldo,     pingpong);
     entity_list_register(&players, &tournaments, giovanni, pingpong);
-    entity_list_register(&players, &tournaments, giacomo, pingpong);
-    entity_list_register(&players, &tournaments, lucia, pingpong);
-    entity_list_register(&players, &tournaments, antonia, pingpong);
-    entity_list_register(&players, &tournaments, tommaso, pingpong);
-    entity_list_register(&players, &tournaments, emilia, pingpong);
-    entity_list_register(&players, &tournaments, maya, pingpong);
+    entity_list_register(&players, &tournaments, giacomo,  pingpong);
+    entity_list_register(&players, &tournaments, lucia,    pingpong);
+    entity_list_register(&players, &tournaments, antonia,  pingpong);
+    entity_list_register(&players, &tournaments, tommaso,  pingpong);
+    entity_list_register(&players, &tournaments, emilia,   pingpong);
+    entity_list_register(&players, &tournaments, maya,     pingpong);
+
     entity_list_register(&players, &tournaments, marco, pingpong);
     entity_list_register(&players, &tournaments, sofia, pingpong);
     entity_list_register(&players, &tournaments, luca, pingpong);
     entity_list_register(&players, &tournaments, giulia, pingpong);
     entity_list_register(&players, &tournaments, matteo, pingpong);
     entity_list_register(&players, &tournaments, chiara, pingpong);
-    entity_list_register(&players, &tournaments, andrea, pingpong);
-    entity_list_register(&players, &tournaments, francesca, pingpong);
+    // entity_list_register(&players, &tournaments, andrea, pingpong);
+    // entity_list_register(&players, &tournaments, francesca, pingpong);
 
 
     // Initialization of global data

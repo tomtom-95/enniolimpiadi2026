@@ -193,3 +193,16 @@ entity_list_unregister(EntityList *list1, EntityList *list2,
     (list1->entities + idx1)->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx2));
     (list2->entities + idx2)->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx1));
 }
+
+void
+assign_medal(EntityList *players, EntityList *tournaments,
+    String8 player_name, String8 tournament_name, MedalsEnum medal)
+{
+    u32 player_idx = entity_list_find(players, player_name);
+    assert(player_idx != players->len + 1);
+
+    u32 tournament_idx = entity_list_find(tournaments, tournament_name);
+    assert(tournament_idx != tournaments->len + 1);
+
+    (tournaments->entities + tournament_idx)->medals[medal] = player_idx;
+}

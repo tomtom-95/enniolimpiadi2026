@@ -11,7 +11,7 @@ typedef struct {
     intptr_t memory;
 } ClayVideoDemo_Arena;
 
-typedef enum {
+typedef enum Page {
     PAGE_Dashboard,
     PAGE_Events,
     PAGE_Players,
@@ -29,6 +29,8 @@ struct ClayVideoDemo_Data {
 
     EntityList players;
     EntityList tournaments;
+
+    MedalsEnum medals[MAX_NUM_ENTITIES];
 };
 
 typedef struct {

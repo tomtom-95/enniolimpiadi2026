@@ -13,6 +13,12 @@
 #define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
 #define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
 
+typedef enum MedalsEnum {
+    MEDAL_GOLD   = 0,
+    MEDAL_SILVER = 1,
+    MEDAL_BRONZE = 2,
+} MedalsEnum;
+
 typedef struct Entity Entity;
 struct Entity {
     u32 nxt;
@@ -21,6 +27,9 @@ struct Entity {
 
     // I am assuming the entity will never have more than 64 registration
     u64 registrations;
+
+    // Used only if Entity is a tournament
+    u8 medals[3];
 };
 
 typedef struct EntityList EntityList;
