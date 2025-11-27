@@ -1,14 +1,14 @@
+#define CLAY_IMPLEMENTATION
+
 #include "arena.h"
 #include "core.h"
-#include "raylib/raylib.h"
 #include "string.c"
 #include "arena.c"
 #include "players.c"
-#include "string.h"
 
-#define CLAY_IMPLEMENTATION
 #include "clay.h"
 #include "raylib/clay_renderer_raylib.c"
+#include "textbox.c"
 #include "layout.c"
 
 
@@ -24,8 +24,7 @@ int main(void)
         FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
 
     uint64_t clayRequiredMemory = Clay_MinMemorySize();
-    Clay_Arena clayMemory = Clay_CreateArenaWithCapacityAndMemory(
-        clayRequiredMemory, malloc(clayRequiredMemory));
+    Clay_Arena clayMemory = Clay_CreateArenaWithCapacityAndMemory(clayRequiredMemory, malloc(clayRequiredMemory));
 
     Clay_Initialize(clayMemory, (Clay_Dimensions) {
        .width = GetScreenWidth(),
@@ -110,6 +109,7 @@ int main(void)
     data.frameArena = arena_alloc(MegaByte(1));
     data.selectedHeaderButton = 0;
     data.yOffset = 0;
+    data.fonts = fonts;
     data.players = players;
     data.tournaments = tournaments;
 
@@ -126,17 +126,11 @@ int main(void)
 
         Vector2 mousePosition = GetMousePosition();
         Vector2 scrollDelta = GetMouseWheelMoveV();
-        Clay_SetPointerState(
-            (Clay_Vector2) { mousePosition.x, mousePosition.y },
-            IsMouseButtonDown(0)
-        );
-        Clay_UpdateScrollContainers(
-            true,
-            (Clay_Vector2) { scrollDelta.x, scrollDelta.y },
-            GetFrameTime()
-        );
 
-        Clay_RenderCommandArray renderCommands = ClayVideoDemo_CreateLayout();
+        Clay_SetPointerState((Clay_Vector2) { mousePosition.x, mousePosition.y }, IsMouseButtonDown(0));
+        Clay_UpdateScrollContainers(true, (Clay_Vector2) { scrollDelta.x, scrollDelta.y }, GetFrameTime());
+
+        Clay_RenderCommandArray renderCommands = CreateLayout();
 
         BeginDrawing();
         ClearBackground(BLACK);

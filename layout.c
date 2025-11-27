@@ -9,6 +9,8 @@
 #include "players.h"
 #include "raylib/raylib.h"
 #include "string.h"
+#include "textbox.h"
+#include "colors.c"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Utility Functions
@@ -29,45 +31,6 @@ str8_to_clay(String8 str)
 const int FONT_ID_BODY_16 = 0;
 const int FONT_ID_ORIENTAL_CHICKEN   = 1;
 
-Clay_Color COLOR_WHITE     = { 255, 255, 255, 255};
-Clay_Color COLOR_OFF_WHITE = { 245, 245, 245, 255};
-
-Clay_Color COLOR_BLACK     = { 0, 0, 0, 255};
-Clay_Color COLOR_RED       = { 255, 0, 0, 255};
-Clay_Color COLOR_GREEN     = { 0, 255, 0, 255};
-Clay_Color COLOR_BLUE      = { 0, 0, 255, 255};
-
-Clay_Color stringColor            = { 0, 0, 0, 255};
-Clay_Color stringColorOnClick     = { 135, 206, 235, 255 };
-Clay_Color contentBackgroundColor = { 90, 90, 90, 255 };
-Clay_Color headerBackgroundColor  = { 255, 255, 255, 255 };
-
-
-Clay_Color headerButtonColor      = { 255, 255, 255, 255};
-Clay_Color headerButtonHoverColor = { 240, 240, 240, 255 };
-Clay_Color headerButtonStringClickColor = { 0, 0, 255, 255 };
-
-Clay_Color dashboardWindowColor  = { 255, 255, 255, 255};
-
-Clay_Color eventElementColor      = { 255, 255, 255, 255};
-Clay_Color eventElementHoverColor = { 250, 250, 250, 255};
-
-Clay_Color matchBorderColor       = { 200, 200, 200, 255};
-Clay_Color matchVsColor           = { 150, 150, 150, 255};
-
-Clay_Color goBackButtonColor      = { 230, 240, 250, 255};
-Clay_Color goBackButtonHoverColor = { 200, 220, 245, 255};
-Clay_Color goBackTextColor        = { 60, 100, 160, 255};
-Clay_Color tournamentTitleColor   = { 40, 40, 60, 255};
-
-Clay_Color textInputBackgroundColor = { 250, 250, 250, 255};
-Clay_Color textInputBorderColor     = { 200, 200, 200, 255};
-Clay_Color addButtonColor           = { 76, 175, 80, 255};
-Clay_Color addButtonHoverColor      = { 56, 142, 60, 255};
-Clay_Color addButtonTextColor       = { 255, 255, 255, 255};
-Clay_Color playerRowColor           = { 255, 255, 255, 255};
-Clay_Color playerRowHoverColor      = { 245, 245, 245, 255};
-
 Clay_Sizing layoutExpand = {
     .width = CLAY_SIZING_GROW(0),
     .height = CLAY_SIZING_GROW(0)
@@ -76,6 +39,7 @@ Clay_Sizing layoutExpand = {
 ClayVideoDemo_Data data = {0};
 
 ///////////////////////////////////////////////////////////////////////////////
+// Event Handlers
 
 void
 HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
@@ -105,6 +69,10 @@ HandleGoBack(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t us
         data.selectedTournamentIdx = 0;
     }
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Layout function
 
 void
 RenderHeaderButton(Clay_String text, Page page)
@@ -641,23 +609,15 @@ RenderEvents(void)
                 .backgroundColor = COLOR_WHITE,
                 .cornerRadius = CLAY_CORNER_RADIUS(8)
             }) {
-                // Text input field
-                CLAY(CLAY_ID("EventNameInput"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_FIXED(300), .height = CLAY_SIZING_FIXED(40)},
-                        .padding = { 12, 12, 0, 0 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
-                    },
-                    .backgroundColor = textInputBackgroundColor,
-                    .cornerRadius = CLAY_CORNER_RADIUS(4),
-                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
-                }) {
-                    CLAY_TEXT(CLAY_STRING("Enter event name..."), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 16,
-                        .textColor = matchVsColor
-                    }));
+                // Process keyboard input when focused
+                if (data.eventNameInput.focused)
+                {
+                    TextInput_ProcessKeyboard(&data.eventNameInput);
                 }
+
+                // Render text input
+                TextInput_Render(&data.eventNameInput, CLAY_STRING("EventNameInput"),
+                    CLAY_STRING("Enter event name..."), data.fonts, FONT_ID_BODY_16);
 
                 // Add button
                 CLAY(CLAY_ID("AddEventButton"), {
@@ -819,23 +779,14 @@ RenderPlayers(void)
             .backgroundColor = COLOR_WHITE,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            // Text input field
-            CLAY(CLAY_ID("PlayerNameInput"), {
-                .layout = {
-                    .sizing = {.width = CLAY_SIZING_FIXED(300), .height = CLAY_SIZING_FIXED(40)},
-                    .padding = { 12, 12, 0, 0 },
-                    .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
-                },
-                .backgroundColor = textInputBackgroundColor,
-                .cornerRadius = CLAY_CORNER_RADIUS(4),
-                .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
-            }) {
-                CLAY_TEXT(CLAY_STRING("Enter player name..."), CLAY_TEXT_CONFIG({
-                    .fontId = FONT_ID_BODY_16,
-                    .fontSize = 16,
-                    .textColor = matchVsColor
-                }));
+            // Process keyboard input when focused
+            if (data.playerNameInput.focused) {
+                TextInput_ProcessKeyboard(&data.playerNameInput);
             }
+
+            // Render text input
+            TextInput_Render(&data.playerNameInput, CLAY_STRING("PlayerNameInput"),
+                CLAY_STRING("Enter player name..."), data.fonts, FONT_ID_BODY_16);
 
             // Add button
             CLAY(CLAY_ID("AddPlayerButton"), {
@@ -967,10 +918,21 @@ RenderResults(void)
 }
 
 Clay_RenderCommandArray
-ClayVideoDemo_CreateLayout(void)
+CreateLayout(void)
 {
     data.frameArena->pos = ARENA_HEADER_SIZE;
-    // data.counterHeaderButton = 0;
+
+    // Handle text input clicks
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        // Handle event name input
+        Clay_BoundingBox eventInputBox = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("EventNameInput"))).boundingBox;
+        TextInput_HandleClick(&data.eventNameInput, eventInputBox, data.fonts, FONT_ID_BODY_16);
+
+        // Handle player name input
+        Clay_BoundingBox playerInputBox = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("PlayerNameInput"))).boundingBox;
+        TextInput_HandleClick(&data.playerNameInput, playerInputBox, data.fonts, FONT_ID_BODY_16);
+    }
 
     Clay_BeginLayout();
 

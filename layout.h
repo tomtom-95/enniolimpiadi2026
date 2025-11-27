@@ -5,6 +5,8 @@
 #include "arena.h"
 #include "players.h"
 #include "string.h"
+#include "raylib/raylib.h"
+#include "textbox.h"
 
 typedef struct {
     intptr_t offset;
@@ -22,6 +24,7 @@ typedef struct ClayVideoDemo_Data ClayVideoDemo_Data;
 struct ClayVideoDemo_Data {
     Arena *frameArena;
     float yOffset;
+    Font *fonts;
 
     Page selectedHeaderButton;
 
@@ -31,6 +34,10 @@ struct ClayVideoDemo_Data {
     EntityList tournaments;
 
     MedalsEnum medals[MAX_NUM_ENTITIES];
+
+    // Text inputs
+    TextInput eventNameInput;
+    TextInput playerNameInput;
 };
 
 typedef struct {
