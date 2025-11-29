@@ -1,15 +1,13 @@
 #define CLAY_IMPLEMENTATION
 
-#include "arena.h"
 #include "core.h"
-#include "string.c"
 #include "arena.c"
+#include "string.c"
 #include "players.c"
 
 #include "clay.h"
-#include "raylib/clay_renderer_raylib.c"
-#include "textbox.c"
 #include "layout.c"
+#include "raylib/clay_renderer_raylib.c"
 
 
 // This function is new since the video was published
