@@ -86,7 +86,8 @@ HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 {
     SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     Page page = (Page)userData;
-    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
         data.selectedHeaderButton = page;
     }
 }
@@ -111,11 +112,64 @@ HandleGoBack(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t us
 }
 
 void
-HandleTextInputHover(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleOuterContainerClick(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
+        data.focusedTextbox = TEXTBOX_NULL;
+    }
+}
+
+void
+TextInput_UpdateCursorFromClick(TextInput *input, float clickRelativeX, Font *fonts, int fontId)
+{
+    if (clickRelativeX < 0) clickRelativeX = 0;
+
+    u32 newCursorPos = 0;
+    float prevWidth = 0;
+    for (u32 i = 0; i <= input->len; i++) {
+        char tempBuffer[TEXT_INPUT_MAX_LEN];
+        for (u32 j = 0; j < i; j++) {
+            tempBuffer[j] = input->buffer[j];
+        }
+        tempBuffer[i] = '\0';
+
+        Vector2 textSize = MeasureTextEx(fonts[fontId], tempBuffer, 16.0f, 0);
+
+        if (clickRelativeX <= textSize.x) {
+            float midpoint = (prevWidth + textSize.x) / 2.0f;
+            if (clickRelativeX < midpoint) {
+                newCursorPos = i > 0 ? i - 1 : 0;
+            } else {
+                newCursorPos = i;
+            }
+            break;
+        }
+        prevWidth = textSize.x;
+        newCursorPos = i;
+    }
+    input->cursorPos = newCursorPos;
+    input->blinkTimer = 0.0f;
+}
+
+void
+HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     SetMouseCursor(MOUSE_CURSOR_IBEAM);
-    // NOTE: TextIput_Render function which would seems to go here in fact must go outside because when want to call it
-    //       always, not only when we hover on the textbox
+
+    TextBoxEnum textBoxEnum = (TextBoxEnum)userData;
+
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        data.focusedTextbox = textBoxEnum;
+
+        Clay_BoundingBox inputBox = Clay_GetElementData(elementId).boundingBox;
+        Vector2 mousePos = GetMousePosition();
+
+        float inputPaddingLeft = 12.0f;
+        float clickRelativeX = mousePos.x - inputBox.x - inputPaddingLeft;
+
+        TextInput_UpdateCursorFromClick(&data.textInputs[textBoxEnum], clickRelativeX, data.fonts, FONT_ID_BODY_16);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -202,158 +256,94 @@ TextInput_ProcessKeyboard(TextInput *input)
         input->cursorPos = input->len;
         input->blinkTimer = 0.0f;
     }
-
-    // Handle escape to unfocus
-    if (IsKeyPressed(KEY_ESCAPE)) {
-        input->focused = false;
-    }
 }
 
 void
-TextInput_UpdateCursorFromClick(TextInput *input, float clickRelativeX, Font *fonts, int fontId)
+TextInput_Render(TextBoxEnum textBoxEnum, Clay_String elementId,
+    Clay_String scrollId, Clay_String placeholder)
 {
-    if (clickRelativeX < 0) clickRelativeX = 0;
+    Clay_Color inputBorderColor = textInputBorderColor;
 
-    u32 newCursorPos = 0;
-    float prevWidth = 0;
-    for (u32 i = 0; i <= input->len; i++) {
-        char tempBuffer[TEXT_INPUT_MAX_LEN];
-        for (u32 j = 0; j < i; j++) {
-            tempBuffer[j] = input->buffer[j];
-        }
-        tempBuffer[i] = '\0';
-
-        Vector2 textSize = MeasureTextEx(fonts[fontId], tempBuffer, 16.0f, 0);
-
-        if (clickRelativeX <= textSize.x) {
-            float midpoint = (prevWidth + textSize.x) / 2.0f;
-            if (clickRelativeX < midpoint) {
-                newCursorPos = i > 0 ? i - 1 : 0;
-            } else {
-                newCursorPos = i;
-            }
-            break;
-        }
-        prevWidth = textSize.x;
-        newCursorPos = i;
-    }
-    input->cursorPos = newCursorPos;
-    input->blinkTimer = 0.0f;
-}
-
-void
-TextInput_HandleClick(TextInput *input, Clay_BoundingBox inputBox, Font *fonts, int fontId)
-{
-    Vector2 mousePos = GetMousePosition();
-    bool clickedInside = mousePos.x >= inputBox.x && mousePos.x <= inputBox.x + inputBox.width &&
-                         mousePos.y >= inputBox.y && mousePos.y <= inputBox.y + inputBox.height;
-
-    if (clickedInside)
-    {
-        float inputPaddingLeft = 12.0f;
-        float clickRelativeX = mousePos.x - inputBox.x - inputPaddingLeft;
-
-        if (!input->focused)
-        {
-            input->focused = true;
-        }
-        TextInput_UpdateCursorFromClick(input, clickRelativeX, fonts, fontId);
-    }
-    else if (input->focused)
-    {
-        input->focused = false;
-    }
-}
-
-void
-TextInput_Render(TextInput *input, Clay_String elementId,
-    Clay_String placeholder, Font *fonts, int fontId)
-{
-    Clay_Color inputBorderColor = input->focused ? headerButtonStringClickColor : textInputBorderColor;
-
+    // Outer container: styling (background, border, corner radius)
     CLAY(Clay_GetElementId(elementId), {
         .layout = {
             .sizing = {.width = CLAY_SIZING_FIXED(300), .height = CLAY_SIZING_FIXED(40)},
             .padding = { 12, 12, 0, 0 },
-            .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
         },
         .backgroundColor = textInputBackgroundColor,
         .cornerRadius = CLAY_CORNER_RADIUS(4),
         .border = { .width = {1, 1, 1, 1}, .color = inputBorderColor }
     }) {
-        // Calculate cursor X offset based on text before cursor
-        float cursorOffsetX = 0;
-        if (input->cursorPos > 0)
-        {
-            char beforeCursor[TEXT_INPUT_MAX_LEN];
-            for (u32 i = 0; i < input->cursorPos; i++) {
-                beforeCursor[i] = input->buffer[i];
-            }
-            beforeCursor[input->cursorPos] = '\0';
-            Vector2 textSize = MeasureTextEx(fonts[fontId], beforeCursor, 16.0f, 0);
-            cursorOffsetX = textSize.x;
-        }
+        Clay_OnHover(HandleTextInput, textBoxEnum);
 
-        // Container that stacks cursor and text
-        CLAY_AUTO_ID({
+        TextInput *input = &data.textInputs[textBoxEnum];
+
+        // Inner container with scroll
+        CLAY(Clay_GetElementId(scrollId), {
             .layout = {
                 .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
-                .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
-            }
+                .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .clip = { .horizontal = true, .childOffset = Clay_GetScrollOffset() }
         }) {
-            int dummy = 0;
-            Clay_OnHover(HandleTextInputHover, dummy);
-            // Render cursor with left padding to position it
-            if (input->focused)
-            {
-                bool cursorVisible = input->blinkTimer < 0.5f;
-                Clay_Color cursorColor = cursorVisible ? stringColor : (Clay_Color){0, 0, 0, 0};
-                CLAY_AUTO_ID({
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
-                        .padding = { .left = (u16)cursorOffsetX },
-                        .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
-                    },
-                    .floating = { .attachTo = CLAY_ATTACH_TO_PARENT }
-                }) {
-                    Clay_OnHover(HandleTextInputHover, dummy);
-                    CLAY_AUTO_ID({
-                        .layout = {
-                            .sizing = {.width = CLAY_SIZING_FIXED(2), .height = CLAY_SIZING_FIXED(18)}
-                        },
-                        .backgroundColor = cursorColor
-                    }) {}
-                }
-            }
-
-            // Render full text in a locally-scoped container to avoid ID collisions
             if (input->len > 0)
             {
-                CLAY(CLAY_ID_LOCAL("TextContent"), {}) {
-                    Clay_String inputText = {
-                        .length = (int)input->len,
-                        .chars = input->buffer,
-                        .isStaticallyAllocated = false
-                    };
-                    CLAY_TEXT(inputText, CLAY_TEXT_CONFIG({
-                        .fontId = fontId,
-                        .fontSize = 16,
-                        .textColor = stringColor
-                    }));
-                }
+                Clay_String inputText = {
+                    .length = (int)input->len,
+                    .chars = input->buffer,
+                    .isStaticallyAllocated = false
+                };
+                CLAY_TEXT(inputText, CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 16,
+                    .textColor = stringColor
+                }));
             }
-            else if (!input->focused)
+            else if (textBoxEnum != data.focusedTextbox)
             {
                 // Show placeholder when empty and not focused
-                CLAY(CLAY_ID_LOCAL("Placeholder"), {}) {
-                    CLAY_TEXT(placeholder, CLAY_TEXT_CONFIG({
-                        .fontId = fontId,
-                        .fontSize = 16,
-                        .textColor = matchVsColor
-                    }));
-                }
+                CLAY_TEXT(placeholder, CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 16,
+                    .textColor = matchVsColor
+                }));
             }
         }
+    }
+}
+
+void
+TextInput_RenderCursor(TextInput *input, Clay_BoundingBox inputBox,
+    Clay_ScrollContainerData scrollData)
+{
+    bool cursorVisible = input->blinkTimer < 0.5f;
+    if (!cursorVisible) return;
+
+    // Calculate cursor X offset based on text before cursor
+    float cursorOffsetX = 0;
+    if (input->cursorPos > 0)
+    {
+        char beforeCursor[TEXT_INPUT_MAX_LEN];
+        for (u32 i = 0; i < input->cursorPos; i++) {
+            beforeCursor[i] = input->buffer[i];
+        }
+        beforeCursor[input->cursorPos] = '\0';
+        Vector2 textSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], beforeCursor, 16.0f, 0);
+        cursorOffsetX = textSize.x;
+    }
+
+    float inputPaddingLeft = 12.0f;
+    float scrollOffsetX = (scrollData.found && scrollData.scrollPosition) ? scrollData.scrollPosition->x : 0.0f;
+    float cursorX = inputBox.x + inputPaddingLeft + cursorOffsetX + scrollOffsetX;
+    float cursorY = inputBox.y + (inputBox.height - 18.0f) / 2.0f;
+
+    // Clip cursor to textbox bounds
+    float clipLeft = inputBox.x + inputPaddingLeft;
+    float clipRight = inputBox.x + inputBox.width - inputPaddingLeft;
+
+    if (cursorX >= clipLeft && cursorX <= clipRight)
+    {
+        DrawRectangle((int)cursorX, (int)cursorY, 1, 18, BLACK);
     }
 }
 
@@ -702,8 +692,7 @@ RenderTournamentChart(u32 tournament_idx)
                 .cornerRadius = CLAY_CORNER_RADIUS(4),
                 .border = { .width = {1, 1, 1, 1}, .color = goBackTextColor }
             }) {
-                u32 dummy = 0;
-                Clay_OnHover(HandleGoBack, (intptr_t)dummy);
+                Clay_OnHover(HandleGoBack, 0);
                 CLAY_TEXT(CLAY_STRING("< Go back"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 14,
@@ -896,14 +885,14 @@ RenderEvents(void)
                 .cornerRadius = CLAY_CORNER_RADIUS(8)
             }) {
                 // Process keyboard input when focused
-                if (data.eventNameInput.focused)
+                if (data.focusedTextbox == TEXTBOX_Events)
                 {
-                    TextInput_ProcessKeyboard(&data.eventNameInput);
+                    TextInput_ProcessKeyboard(&data.textInputs[TEXTBOX_Events]);
                 }
 
                 // Render text input
-                TextInput_Render(&data.eventNameInput, CLAY_STRING("EventNameInput"),
-                    CLAY_STRING("Enter event name..."), data.fonts, FONT_ID_BODY_16);
+                TextInput_Render(TEXTBOX_Events, CLAY_STRING("EventNameInput"),
+                    CLAY_STRING("EventNameInputScroll"), CLAY_STRING("Enter event name..."));
 
                 // Add button
                 CLAY(CLAY_ID("AddEventButton"), {
@@ -1066,13 +1055,14 @@ RenderPlayers(void)
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
             // Process keyboard input when focused
-            if (data.playerNameInput.focused) {
-                TextInput_ProcessKeyboard(&data.playerNameInput);
+            if (data.focusedTextbox == TEXTBOX_Players)
+            {
+                TextInput_ProcessKeyboard(&data.textInputs[TEXTBOX_Players]);
             }
 
             // Render text input
-            TextInput_Render(&data.playerNameInput, CLAY_STRING("PlayerNameInput"),
-                CLAY_STRING("Enter player name..."), data.fonts, FONT_ID_BODY_16);
+            TextInput_Render(TEXTBOX_Players, CLAY_STRING("PlayerNameInput"),
+                CLAY_STRING("PlayerNameInputScroll"), CLAY_STRING("Enter player name..."));
 
             // Add button
             CLAY(CLAY_ID("AddPlayerButton"), {
@@ -1208,21 +1198,8 @@ CreateLayout(void)
 {
     data.frameArena->pos = ARENA_HEADER_SIZE;
 
-    // Handle text input clicks
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-    {
-        // Handle event name input
-        Clay_BoundingBox eventInputBox = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("EventNameInput"))).boundingBox;
-        TextInput_HandleClick(&data.eventNameInput, eventInputBox, data.fonts, FONT_ID_BODY_16);
-
-        // Handle player name input
-        Clay_BoundingBox playerInputBox = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("PlayerNameInput"))).boundingBox;
-        TextInput_HandleClick(&data.playerNameInput, playerInputBox, data.fonts, FONT_ID_BODY_16);
-    }
-
     Clay_BeginLayout();
 
-    // Build UI here
     CLAY(CLAY_ID("OuterContainer"), {
         .backgroundColor = COLOR_OFF_WHITE,
         .layout = {
@@ -1232,6 +1209,8 @@ CreateLayout(void)
             .childGap = 16
         }
     }) {
+        Clay_OnHover(HandleOuterContainerClick, 0);
+
         CLAY(CLAY_ID("HeaderBar"), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
@@ -1272,6 +1251,7 @@ CreateLayout(void)
     }
 
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();
+
     for (int32_t i = 0; i < renderCommands.length; i++) {
         Clay_RenderCommandArray_Get(&renderCommands, i)->boundingBox.y += data.yOffset;
     }

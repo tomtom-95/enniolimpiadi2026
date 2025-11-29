@@ -1,3 +1,4 @@
+#include "layout.h"
 #define CLAY_IMPLEMENTATION
 
 #include "core.h"
@@ -111,8 +112,6 @@ int main(void)
     data.players = players;
     data.tournaments = tournaments;
 
-    // ClayVideoDemo_Data data = ClayVideoDemo_Initialize();
-
     while (!WindowShouldClose())
     {
         Clay_SetLayoutDimensions((Clay_Dimensions) {
@@ -133,6 +132,28 @@ int main(void)
         BeginDrawing();
         ClearBackground(BLACK);
         Clay_Raylib_Render(renderCommands, fonts);
+
+        // Render text input cursors (after Clay, so they don't interfere with scrolling)
+        Clay_BoundingBox bounding_box;
+        Clay_ElementId element_id;
+        Clay_ScrollContainerData scroll_data;
+        if (data.focusedTextbox == TEXTBOX_Events)
+        {
+            bounding_box = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("EventNameInput"))).boundingBox;
+            element_id   = Clay_GetElementId(CLAY_STRING("EventNameInputScroll"));
+            scroll_data  = Clay_GetScrollContainerData(element_id);
+
+            TextInput_RenderCursor(&data.textInputs[data.focusedTextbox], bounding_box, scroll_data);
+        }
+        else if (data.focusedTextbox == TEXTBOX_Players)
+        {
+            bounding_box = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("PlayerNameInput"))).boundingBox;
+            element_id   = Clay_GetElementId(CLAY_STRING("PlayerNameInputScroll"));
+            scroll_data  = Clay_GetScrollContainerData(element_id);
+
+            TextInput_RenderCursor(&data.textInputs[data.focusedTextbox], bounding_box, scroll_data);
+        }
+
         EndDrawing();
     }
 
