@@ -206,3 +206,80 @@ assign_medal(EntityList *players, EntityList *tournaments,
 
     (tournaments->entities + tournament_idx)->medals[medal] = player_idx;
 }
+
+/**
+ * Construct the tournament bracket from registered players.
+ *
+ * Places player indices into a binary tree array (heap-style layout).
+ * For non-power-of-2 player counts, some players receive byes.
+ *
+ * Example: 3 players (indices 3, 6, 8)
+ *   - Player 3 at position 1 (bye to finals)
+ *   - Player 6 at position 5, Player 8 at position 6 (fight first)
+ *   - Winner of 5 vs 6 goes to position 2, fights position 1 for position 0
+ *
+ * @param tournaments     The tournament entity list
+ * @param tournament_name Name of the tournament to construct bracket for
+ */
+void
+tournament_construct_bracket(EntityList *tournaments, String8 tournament_name)
+{
+    u32 idx = entity_list_find(tournaments, tournament_name);
+    assert(idx != tournaments->len + 1);
+
+    Entity *tournament = tournaments->entities + idx;
+
+    // Clear the bracket
+    MemoryZeroArray(tournament->bracket);
+
+    // Get all registered players
+    s32 positions[64];
+    u32 num_players = find_all_filled_slots(tournament->registrations, positions);
+
+    if (num_players == 0)
+    {
+        return;
+    }
+
+    // Find smallest power of 2 >= num_players
+    u32 bracket_size = 1;
+    while (bracket_size < num_players)
+    {
+        bracket_size *= 2;
+    }
+
+    u32 byes = bracket_size - num_players;
+
+    // Determine leaf level for this bracket size
+    // P=2: level 1, P=4: level 2, P=8: level 3, etc.
+    u32 leaf_level = 0;
+    u32 tmp = bracket_size;
+    while (tmp > 1)
+    {
+        leaf_level++;
+        tmp /= 2;
+    }
+
+    u32 leaf_start = (1 << leaf_level) - 1;  // 2^level - 1
+
+    u32 player_idx = 0;
+
+    // Place bye players at parent level (they skip the first round)
+    for (u32 i = 0; i < byes && player_idx < num_players; ++i)
+    {
+        u32 leaf_pos = leaf_start + i * 2;
+        u32 parent_pos = (leaf_pos - 1) / 2;
+        tournament->bracket[parent_pos] = BIT_TO_ENTITY_IDX(positions[player_idx]);
+        player_idx++;
+    }
+
+    // Place remaining players at leaf positions (they fight in first round)
+    u32 fighting_start = leaf_start + byes * 2;
+
+    while (player_idx < num_players)
+    {
+        tournament->bracket[fighting_start] = BIT_TO_ENTITY_IDX(positions[player_idx]);
+        fighting_start++;
+        player_idx++;
+    }
+}

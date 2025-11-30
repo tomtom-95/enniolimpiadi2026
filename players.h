@@ -9,6 +9,7 @@
 // I do not want anymore to look at code and wonder why and how and if it works!
 
 #define MAX_NUM_ENTITIES 64
+#define BRACKET_SIZE 127  // 64 + 32 + 16 + 8 + 4 + 2 + 1
 
 #define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
 #define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
@@ -18,6 +19,12 @@ typedef enum MedalsEnum {
     MEDAL_SILVER = 1,
     MEDAL_BRONZE = 2,
 } MedalsEnum;
+
+typedef enum TournamentState {
+    TOURNAMENT_REGISTRATION = 0,  // Players can register/unregister
+    TOURNAMENT_IN_PROGRESS  = 1,  // Bracket is locked, matches can be played
+    TOURNAMENT_FINISHED     = 2,  // Tournament completed
+} TournamentState;
 
 typedef struct Entity Entity;
 struct Entity {
@@ -30,6 +37,11 @@ struct Entity {
 
     // Used only if Entity is a tournament
     u8 medals[3];
+    TournamentState state;  // Tournament phase (registration, in_progress, finished)
+
+    // Tournament bracket tree (heap-style: children of i at 2*i+1 and 2*i+2)
+    // Stores player indices. 0 means empty slot.
+    u8 bracket[BRACKET_SIZE];
 };
 
 typedef struct EntityList EntityList;
@@ -51,5 +63,7 @@ u32  entity_list_count(EntityList *list);
 void entity_list_remove(EntityList *list1, EntityList *list2, String8 name);
 void entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
 void entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
+
+void tournament_construct_bracket(EntityList *tournaments, String8 tournament_name);
 
 #endif // PLAYERS_H
