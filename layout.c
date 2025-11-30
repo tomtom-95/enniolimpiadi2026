@@ -48,6 +48,10 @@ Clay_Color textInputBackgroundColor = { 250, 250, 250, 255};
 Clay_Color textInputBorderColor     = { 200, 200, 200, 255};
 Clay_Color addButtonColor           = { 76, 175, 80, 255};
 Clay_Color addButtonHoverColor      = { 56, 142, 60, 255};
+
+Clay_Color removeButtonColor        = { 255, 235, 238, 255};  // Light red/pink
+Clay_Color removeButtonHoverColor   = { 255, 205, 210, 255};  // Darker pink on hover
+Clay_Color removeTextColor          = { 211, 47, 47, 255};    // Red text
 Clay_Color addButtonTextColor       = { 255, 255, 255, 255};
 Clay_Color playerRowColor           = { 255, 255, 255, 255};
 Clay_Color playerRowHoverColor      = { 245, 245, 245, 255};
@@ -724,15 +728,15 @@ RenderTournamentChart(u32 tournament_idx)
                 .y = CLAY_ALIGN_Y_TOP
             },
         },
-        .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() },
         .backgroundColor = COLOR_OFF_WHITE
     }) {
+        // Header with go back and tournament name
         CLAY(CLAY_ID("TournamentHeader"), {
             .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
                 .padding = { 12, 12, 8, 8 },
-                .childGap = 8,
+                .childGap = 16,
                 .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
             },
             .backgroundColor = COLOR_WHITE,
@@ -761,233 +765,292 @@ RenderTournamentChart(u32 tournament_idx)
                 .fontSize = 24,
                 .textColor = tournamentTitleColor
             }));
+        }
 
-            bool dropdownHovered = Clay_PointerOver(Clay_GetElementId(CLAY_STRING("RegisterPlayersDropdown")))
-                                   ||
-                                   Clay_PointerOver(Clay_GetElementId(CLAY_STRING("PlayerDropdownList")));
-
-            // Player registration dropdown
-            CLAY(CLAY_ID("RegisterPlayersDropdown"), {
+        // Two-column layout: left panel + chart
+        CLAY(CLAY_ID("TournamentContent"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = layoutExpand,
+                .childGap = 16
+            }
+        }) {
+            // Left panel - Player management
+            CLAY(CLAY_ID("LeftPanel"), {
                 .layout = {
-                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
-                    .padding = { 10, 10, 6, 6 }
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = {.width = CLAY_SIZING_FIXED(180), .height = CLAY_SIZING_GROW(0)},
+                    .padding = { 12, 12, 12, 12 },
+                    .childGap = 12
                 },
-                .backgroundColor = Clay_Hovered() ? goBackButtonHoverColor : goBackButtonColor,
-                .cornerRadius = CLAY_CORNER_RADIUS(4),
-                .border = { .width = {1, 1, 1, 1}, .color = goBackTextColor }
+                .backgroundColor = COLOR_WHITE,
+                .cornerRadius = CLAY_CORNER_RADIUS(6)
             }) {
-                CLAY_TEXT(CLAY_STRING("Register/Unregister Players"), CLAY_TEXT_CONFIG({
+                // Registered players section
+                CLAY_TEXT(CLAY_STRING("Registered Players:"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
-                    .fontSize = 14,
-                    .textColor = goBackTextColor
+                    .fontSize = 16,
+                    .textColor = matchVsColor
                 }));
 
-                // Floating dropdown that appears on hover
-                if (dropdownHovered)
-                {
-                    // Invisible hover bridge container
-                    CLAY(CLAY_ID("PlayerDropdownList"), {
-                        .layout = {
-                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
-                            .padding = { 0, 0, 6, 0 }
-                        },
-                        .floating = {
-                            .attachTo = CLAY_ATTACH_TO_PARENT,
-                            .attachPoints = {
-                                .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM,
-                                .element = CLAY_ATTACH_POINT_LEFT_TOP
-                            },
-                            .zIndex = 100
-                        }
-                    }) {
-                        // Actual visible dropdown
-                        CLAY(CLAY_ID("PlayerDropdownListInner"), {
+                // List of registered players (click to unregister)
+                CLAY(CLAY_ID("RegisteredPlayersList"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
+                        .childGap = 4
+                    },
+                    .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
+                }) {
+                    s32 positions[64] = {0};
+                    u32 count = find_all_filled_slots((data.tournaments.entities + tournament_idx)->registrations, positions);
+
+                    for (u32 i = 0; i < count; i++)
+                    {
+                        u32 player_idx = BIT_TO_ENTITY_IDX(positions[i]);
+                        Entity *player = data.players.entities + player_idx;
+
+                        CLAY(CLAY_IDI("RegisteredPlayer", player_idx), {
                             .layout = {
-                                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                                .sizing = {.width = CLAY_SIZING_FIXED(200), .height = CLAY_SIZING_FIXED(200)},
-                                .padding = { 4, 4, 4, 4 },
-                                .childGap = 2
+                                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                                .padding = { 8, 8, 6, 6 },
+                                .childGap = 6
                             },
-                            .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() },
-                            .backgroundColor = COLOR_WHITE,
+                            .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
                             .cornerRadius = CLAY_CORNER_RADIUS(4),
                             .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
                         }) {
-                            // Iterate through all players
-                            u32 idx_tail = data.players.len + 1;
-                            u32 idx = (data.players.entities)->nxt;
-                            while (idx != idx_tail)
-                            {
-                                Entity *player = data.players.entities + idx;
+                            Clay_OnHover(HandleTogglePlayerRegistration, (intptr_t)player_idx);
+                            CLAY_TEXT(CLAY_STRING("-"), CLAY_TEXT_CONFIG({
+                                .fontId = FONT_ID_BODY_16,
+                                .fontSize = 16,
+                                .textColor = removeTextColor
+                            }));
+                            CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                                .fontId = FONT_ID_BODY_16,
+                                .fontSize = 16,
+                                .textColor = stringColor
+                            }));
+                        }
+                    }
 
-                                // Check if player is registered to this tournament
-                                bool is_registered = (player->registrations >> ENTITY_IDX_TO_BIT(tournament_idx)) & 1;
+                    if (count == 0)
+                    {
+                        CLAY_TEXT(CLAY_STRING("No players registered"), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 16,
+                            .textColor = matchVsColor
+                        }));
+                    }
+                }
 
-                                Clay_Color rowBgColor = is_registered ? addButtonColor : COLOR_WHITE;
-                                Clay_Color rowTextColor = is_registered ? COLOR_WHITE : stringColor;
-                                Clay_Color rowHoverColor = is_registered ? addButtonHoverColor : playerRowHoverColor;
+                // Not registered players section
+                CLAY_TEXT(CLAY_STRING("Not Registered:"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 16,
+                    .textColor = matchVsColor
+                }));
 
-                                CLAY(CLAY_IDI("PlayerDropdownRow", idx), {
-                                    .layout = {
-                                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                                        .padding = { 10, 10, 8, 8 }
-                                    },
-                                    .backgroundColor = Clay_Hovered() ? rowHoverColor : rowBgColor,
-                                    .cornerRadius = CLAY_CORNER_RADIUS(4)
-                                }) {
-                                    Clay_OnHover(HandleTogglePlayerRegistration, (intptr_t)idx);
-                                    CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
-                                        .fontId = FONT_ID_BODY_16,
-                                        .fontSize = 14,
-                                        .textColor = rowTextColor
-                                    }));
-                                }
+                // List of not registered players (click to register)
+                CLAY(CLAY_ID("NotRegisteredPlayersList"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
+                        .childGap = 4
+                    },
+                    .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
+                }) {
+                    u32 not_registered_count = 0;
+                    u32 idx_tail = data.players.len + 1;
+                    u32 idx = (data.players.entities)->nxt;
+                    while (idx != idx_tail)
+                    {
+                        Entity *player = data.players.entities + idx;
+                        bool is_registered = (player->registrations >> ENTITY_IDX_TO_BIT(tournament_idx)) & 1;
 
-                                idx = player->nxt;
+                        if (!is_registered)
+                        {
+                            not_registered_count++;
+                            CLAY(CLAY_IDI("NotRegisteredPlayer", idx), {
+                                .layout = {
+                                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                                    .padding = { 8, 8, 6, 6 },
+                                    .childGap = 6
+                                },
+                                .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
+                                .cornerRadius = CLAY_CORNER_RADIUS(4),
+                                .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+                            }) {
+                                Clay_OnHover(HandleTogglePlayerRegistration, (intptr_t)idx);
+                                CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
+                                    .fontId = FONT_ID_BODY_16,
+                                    .fontSize = 16,
+                                    .textColor = addButtonColor
+                                }));
+                                CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                                    .fontId = FONT_ID_BODY_16,
+                                    .fontSize = 16,
+                                    .textColor = stringColor
+                                }));
                             }
                         }
+
+                        idx = player->nxt;
+                    }
+
+                    if (not_registered_count == 0)
+                    {
+                        CLAY_TEXT(CLAY_STRING("All players registered"), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 16,
+                            .textColor = matchVsColor
+                        }));
                     }
                 }
             }
-        }
-        CLAY(CLAY_ID("TournamentChart"), {
-            .layout = {
-                .sizing = layoutExpand,
-                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
-            },
-            .backgroundColor = COLOR_OFF_WHITE
-        }) {
-            // Get the number of players in the tournament
-            s32 _positions[64] = {0};
-            u32 num_players = find_all_filled_slots((data.tournaments.entities + tournament_idx)->registrations, _positions);
 
-            // Calculate bracket size (next power of 2 >= num_players)
-            u32 bracket_size = 1;
-            while (bracket_size < num_players) {
-                bracket_size <<= 1;
-            }
-
-            // Calculate byes
-            u32 num_byes = bracket_size - num_players;
-            u32 matches_in_r1 = bracket_size / 2;
-            u32 actual_matches_r1 = matches_in_r1 - num_byes;
-
-            // Calculate number of rounds based on bracket size
-            u32 num_rounds = 0;
-            u32 temp = bracket_size;
-            while (temp > 1)
-            {
-                temp >>= 1;
-                num_rounds++;
-            }
-
-            // Create horizontal layout for rounds (left to right)
-            CLAY(CLAY_ID("RoundsContainer"), {
+            // Right panel - Tournament chart
+            CLAY(CLAY_ID("TournamentChart"), {
                 .layout = {
-                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-                    .childGap = 32,
-                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    .sizing = layoutExpand,
+                    .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
                 },
+                .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() },
+                .backgroundColor = COLOR_OFF_WHITE
             }) {
-                for (u32 round = 0; round < num_rounds; round++) {
-                    u32 matches_in_round = bracket_size >> (round + 1);
-                    // Each slot grows by 2^round so matches align with parent matches
-                    u32 grow_factor = 1 << round;
+                // Get the number of players in the tournament
+                s32 _positions[64] = {0};
+                u32 num_players = find_all_filled_slots((data.tournaments.entities + tournament_idx)->registrations, _positions);
 
-                    CLAY(CLAY_IDI("Round", round), {
-                        .layout = {
-                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                        }
-                    }) {
-                        // Matches in this round
-                        for (u32 match = 0; match < matches_in_round; match++)
-                        {
-                            u32 match_id = round * 100 + match;
+                // Calculate bracket size (next power of 2 >= num_players)
+                u32 bracket_size = 1;
+                while (bracket_size < num_players) {
+                    bracket_size <<= 1;
+                }
 
-                            // Slot container that grows proportionally and centers the match
-                            CLAY(CLAY_IDI("MatchSlot", match_id), {
-                                .layout = {
-                                    .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_GROW(grow_factor) },
-                                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
-                                }
-                            }) {
-                                if (round == 0)
-                                {
-                                    // First round
-                                    if (match < actual_matches_r1)
+                // Calculate byes
+                u32 num_byes = bracket_size - num_players;
+                u32 matches_in_r1 = bracket_size / 2;
+                u32 actual_matches_r1 = matches_in_r1 - num_byes;
+
+                // Calculate number of rounds based on bracket size
+                u32 num_rounds = 0;
+                u32 temp = bracket_size;
+                while (temp > 1)
+                {
+                    temp >>= 1;
+                    num_rounds++;
+                }
+
+                // Create horizontal layout for rounds (left to right)
+                CLAY(CLAY_ID("RoundsContainer"), {
+                    .layout = {
+                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                        .childGap = 32,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                }) {
+                    for (u32 round = 0; round < num_rounds; round++) {
+                        u32 matches_in_round = bracket_size >> (round + 1);
+                        // Each slot grows by 2^round so matches align with parent matches
+                        u32 grow_factor = 1 << round;
+
+                        CLAY(CLAY_IDI("Round", round), {
+                            .layout = {
+                                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                                .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                            }
+                        }) {
+                            // Matches in this round
+                            for (u32 match = 0; match < matches_in_round; match++)
+                            {
+                                u32 match_id = round * 100 + match;
+
+                                // Slot container that grows proportionally and centers the match
+                                CLAY(CLAY_IDI("MatchSlot", match_id), {
+                                    .layout = {
+                                        .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_GROW(grow_factor) },
+                                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                                    }
+                                }) {
+                                    if (round == 0)
                                     {
-                                        // Real match with two players
-                                        u32 player1_idx = _positions[match * 2];
-                                        u32 player2_idx = _positions[match * 2 + 1];
+                                        // First round
+                                        if (match < actual_matches_r1)
+                                        {
+                                            // Real match with two players
+                                            u32 player1_idx = _positions[match * 2];
+                                            u32 player2_idx = _positions[match * 2 + 1];
 
-                                        Entity *player1 = data.players.entities + BIT_TO_ENTITY_IDX(player1_idx);
-                                        Entity *player2 = data.players.entities + BIT_TO_ENTITY_IDX(player2_idx);
+                                            Entity *player1 = data.players.entities + BIT_TO_ENTITY_IDX(player1_idx);
+                                            Entity *player2 = data.players.entities + BIT_TO_ENTITY_IDX(player2_idx);
 
-                                        RenderMatchSlot(str8_to_clay(player1->name), str8_to_clay(player2->name), false, false, match_id);
+                                            RenderMatchSlot(str8_to_clay(player1->name), str8_to_clay(player2->name), false, false, match_id);
+                                        }
+                                        else
+                                        {
+                                            // Bye slot
+                                            RenderByeSlot(match_id);
+                                        }
+                                    }
+                                    else if (round == 1 && num_byes > 0)
+                                    {
+                                        // Second round - check if this slot has a bye player
+                                        u32 r1_first = match * 2;
+                                        u32 r1_second = match * 2 + 1;
+
+                                        bool first_is_bye = (r1_first >= actual_matches_r1);
+                                        bool second_is_bye = (r1_second >= actual_matches_r1);
+
+                                        if (first_is_bye && !second_is_bye)
+                                        {
+                                            // First parent was bye, second was real match
+                                            u32 bye_idx = r1_first - actual_matches_r1;
+                                            u32 bye_player_pos = 2 * actual_matches_r1 + bye_idx;
+                                            u32 bye_player_idx = _positions[bye_player_pos];
+                                            Entity *bye_player = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx);
+
+                                            RenderMatchSlot(str8_to_clay(bye_player->name), CLAY_STRING("TBD"), false, true, match_id);
+                                        }
+                                        else if (!first_is_bye && second_is_bye)
+                                        {
+                                            // Second parent was bye, first was real match
+                                            u32 bye_idx = r1_second - actual_matches_r1;
+                                            u32 bye_player_pos = 2 * actual_matches_r1 + bye_idx;
+                                            u32 bye_player_idx = _positions[bye_player_pos];
+                                            Entity *bye_player = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx);
+
+                                            RenderMatchSlot(CLAY_STRING("TBD"), str8_to_clay(bye_player->name), true, false, match_id);
+                                        }
+                                        else if (first_is_bye && second_is_bye)
+                                        {
+                                            // Both parents were byes (rare, but handle it)
+                                            u32 bye_idx1 = r1_first - actual_matches_r1;
+                                            u32 bye_idx2 = r1_second - actual_matches_r1;
+                                            u32 bye_player_pos1 = 2 * actual_matches_r1 + bye_idx1;
+                                            u32 bye_player_pos2 = 2 * actual_matches_r1 + bye_idx2;
+                                            u32 bye_player_idx1 = _positions[bye_player_pos1];
+                                            u32 bye_player_idx2 = _positions[bye_player_pos2];
+                                            Entity *bye_player1 = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx1);
+                                            Entity *bye_player2 = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx2);
+
+                                            RenderMatchSlot(str8_to_clay(bye_player1->name), str8_to_clay(bye_player2->name), false, false, match_id);
+                                        }
+                                        else
+                                        {
+                                            // Neither parent was bye - TBD vs TBD
+                                            RenderMatchSlot(CLAY_STRING("TBD"), CLAY_STRING("TBD"), true, true, match_id);
+                                        }
                                     }
                                     else
                                     {
-                                        // Bye slot
-                                        RenderByeSlot(match_id);
-                                    }
-                                }
-                                else if (round == 1 && num_byes > 0)
-                                {
-                                    // Second round - check if this slot has a bye player
-                                    u32 r1_first = match * 2;
-                                    u32 r1_second = match * 2 + 1;
-
-                                    bool first_is_bye = (r1_first >= actual_matches_r1);
-                                    bool second_is_bye = (r1_second >= actual_matches_r1);
-
-                                    if (first_is_bye && !second_is_bye)
-                                    {
-                                        // First parent was bye, second was real match
-                                        u32 bye_idx = r1_first - actual_matches_r1;
-                                        u32 bye_player_pos = 2 * actual_matches_r1 + bye_idx;
-                                        u32 bye_player_idx = _positions[bye_player_pos];
-                                        Entity *bye_player = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx);
-
-                                        RenderMatchSlot(str8_to_clay(bye_player->name), CLAY_STRING("TBD"), false, true, match_id);
-                                    }
-                                    else if (!first_is_bye && second_is_bye)
-                                    {
-                                        // Second parent was bye, first was real match
-                                        u32 bye_idx = r1_second - actual_matches_r1;
-                                        u32 bye_player_pos = 2 * actual_matches_r1 + bye_idx;
-                                        u32 bye_player_idx = _positions[bye_player_pos];
-                                        Entity *bye_player = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx);
-
-                                        RenderMatchSlot(CLAY_STRING("TBD"), str8_to_clay(bye_player->name), true, false, match_id);
-                                    }
-                                    else if (first_is_bye && second_is_bye)
-                                    {
-                                        // Both parents were byes (rare, but handle it)
-                                        u32 bye_idx1 = r1_first - actual_matches_r1;
-                                        u32 bye_idx2 = r1_second - actual_matches_r1;
-                                        u32 bye_player_pos1 = 2 * actual_matches_r1 + bye_idx1;
-                                        u32 bye_player_pos2 = 2 * actual_matches_r1 + bye_idx2;
-                                        u32 bye_player_idx1 = _positions[bye_player_pos1];
-                                        u32 bye_player_idx2 = _positions[bye_player_pos2];
-                                        Entity *bye_player1 = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx1);
-                                        Entity *bye_player2 = data.players.entities + BIT_TO_ENTITY_IDX(bye_player_idx2);
-
-                                        RenderMatchSlot(str8_to_clay(bye_player1->name), str8_to_clay(bye_player2->name), false, false, match_id);
-                                    }
-                                    else
-                                    {
-                                        // Neither parent was bye - TBD vs TBD
+                                        // Later rounds or round 1 without byes
                                         RenderMatchSlot(CLAY_STRING("TBD"), CLAY_STRING("TBD"), true, true, match_id);
                                     }
-                                }
-                                else
-                                {
-                                    // Later rounds or round 1 without byes
-                                    RenderMatchSlot(CLAY_STRING("TBD"), CLAY_STRING("TBD"), true, true, match_id);
                                 }
                             }
                         }
