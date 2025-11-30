@@ -31,19 +31,37 @@ typedef enum Page
 }
 Page;
 
+#define TEXTBOX_LIST                                               \
+    X(TEXTBOX_NULL,    "",                "")                      \
+    X(TEXTBOX_Events,  "EventNameInput",  "EventNameInputScroll")  \
+    X(TEXTBOX_Players, "PlayerNameInput", "PlayerNameInputScroll")
+
 typedef enum TextBoxEnum
 {
-    TEXTBOX_NULL,
-    TEXTBOX_Events,
-    TEXTBOX_Players,
+#define X(name, input_id, scroll_id) name,
+    TEXTBOX_LIST
+#undef X
     TEXTBOX_COUNT,
 }
 TextBoxEnum;
 
+static const char *TextBoxInputIds[] = {
+#define X(name, input_id, scroll_id) input_id,
+    TEXTBOX_LIST
+#undef X
+};
+
+static const char *TextBoxScrollIds[] = {
+#define X(name, input_id, scroll_id) scroll_id,
+    TEXTBOX_LIST
+#undef X
+};
+
 
 typedef struct ClayVideoDemo_Data ClayVideoDemo_Data;
 struct ClayVideoDemo_Data {
-    Arena *frameArena;
+    Arena *arena;      // Persistent arena for allocations
+    Arena *frameArena; // Per-frame temporary arena
     float yOffset;
     Font *fonts;
 
@@ -76,7 +94,6 @@ typedef struct {
 // 
 // // Texbox functions
 // void TextInput_ProcessKeyboard(TextInput *input);
-// void TextInput_UpdateCursorFromClick(TextInput *input, float clickRelativeX, Font *fonts, int fontId);
 // void TextInput_HandleClick(TextInput *input, Clay_BoundingBox inputBox, Font *fonts, int fontId);
 // void TextInput_Render(TextInput *input, Clay_String elementId, Clay_String scrollId, Clay_String placeholder, Font *fonts, int fontId);
 // void TextInput_RenderCursor(TextInput *input, Clay_BoundingBox inputBox, Clay_ScrollContainerData scrollData, Font *fonts, int fontId);

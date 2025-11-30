@@ -50,5 +50,6 @@ u32  entity_list_add(EntityList *entity_list, String8 name);
 u32  entity_list_count(EntityList *list);
 void entity_list_remove(EntityList *list1, EntityList *list2, String8 name);
 void entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
+void entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
 
 #endif // PLAYERS_H

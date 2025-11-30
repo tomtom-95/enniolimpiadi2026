@@ -11,13 +11,14 @@
 #include "raylib/clay_renderer_raylib.c"
 
 
-// This function is new since the video was published
-void HandleClayErrors(Clay_ErrorData errorData)
+void
+HandleClayErrors(Clay_ErrorData errorData)
 {
     printf("%s", errorData.errorText.chars);
 }
 
-int main(void)
+int
+main(void)
 {
     Clay_Raylib_Initialize(1024, 768, "Introducing Clay Demo",
         FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
@@ -105,6 +106,7 @@ int main(void)
 
 
     // Initialization of global data
+    data.arena = arena;
     data.frameArena = arena_alloc(MegaByte(1));
     data.selectedHeaderButton = 0;
     data.yOffset = 0;
@@ -133,23 +135,19 @@ int main(void)
         ClearBackground(BLACK);
         Clay_Raylib_Render(renderCommands, fonts);
 
-        // Render text input cursors (after Clay, so they don't interfere with scrolling)
-        Clay_BoundingBox bounding_box;
-        Clay_ElementId element_id;
-        Clay_ScrollContainerData scroll_data;
-        if (data.focusedTextbox == TEXTBOX_Events)
+        // Render text input cursor (after Clay, so it doesn't interfere with scrolling)
+        if (data.focusedTextbox != TEXTBOX_NULL)
         {
-            bounding_box = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("EventNameInput"))).boundingBox;
-            element_id   = Clay_GetElementId(CLAY_STRING("EventNameInputScroll"));
-            scroll_data  = Clay_GetScrollContainerData(element_id);
+            const char *inputIdStr = TextBoxInputIds[data.focusedTextbox];
+            const char *scrollIdStr = TextBoxScrollIds[data.focusedTextbox];
 
-            TextInput_RenderCursor(&data.textInputs[data.focusedTextbox], bounding_box, scroll_data);
-        }
-        else if (data.focusedTextbox == TEXTBOX_Players)
-        {
-            bounding_box = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("PlayerNameInput"))).boundingBox;
-            element_id   = Clay_GetElementId(CLAY_STRING("PlayerNameInputScroll"));
-            scroll_data  = Clay_GetScrollContainerData(element_id);
+            Clay_BoundingBox bounding_box = Clay_GetElementData(
+                Clay_GetElementId((Clay_String){ .length = strlen(inputIdStr), .chars = inputIdStr })
+            ).boundingBox;
+
+            Clay_ScrollContainerData scroll_data = Clay_GetScrollContainerData(
+                Clay_GetElementId((Clay_String){ .length = strlen(scrollIdStr), .chars = scrollIdStr })
+            );
 
             TextInput_RenderCursor(&data.textInputs[data.focusedTextbox], bounding_box, scroll_data);
         }

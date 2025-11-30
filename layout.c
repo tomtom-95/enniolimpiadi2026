@@ -93,7 +93,7 @@ HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 }
 
 void
-HandleEventElementInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleEventRowInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     u8 event_idx = (u8)userData;
@@ -103,7 +103,7 @@ HandleEventElementInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 }
 
 void
-HandleGoBack(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleGoBackInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
@@ -112,43 +112,11 @@ HandleGoBack(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t us
 }
 
 void
-HandleOuterContainerClick(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleOuterContainerInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.focusedTextbox = TEXTBOX_NULL;
     }
-}
-
-void
-TextInput_UpdateCursorFromClick(TextInput *input, float clickRelativeX, Font *fonts, int fontId)
-{
-    if (clickRelativeX < 0) clickRelativeX = 0;
-
-    u32 newCursorPos = 0;
-    float prevWidth = 0;
-    for (u32 i = 0; i <= input->len; i++) {
-        char tempBuffer[TEXT_INPUT_MAX_LEN];
-        for (u32 j = 0; j < i; j++) {
-            tempBuffer[j] = input->buffer[j];
-        }
-        tempBuffer[i] = '\0';
-
-        Vector2 textSize = MeasureTextEx(fonts[fontId], tempBuffer, 16.0f, 0);
-
-        if (clickRelativeX <= textSize.x) {
-            float midpoint = (prevWidth + textSize.x) / 2.0f;
-            if (clickRelativeX < midpoint) {
-                newCursorPos = i > 0 ? i - 1 : 0;
-            } else {
-                newCursorPos = i;
-            }
-            break;
-        }
-        prevWidth = textSize.x;
-        newCursorPos = i;
-    }
-    input->cursorPos = newCursorPos;
-    input->blinkTimer = 0.0f;
 }
 
 void
@@ -165,10 +133,98 @@ HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t
         Clay_BoundingBox inputBox = Clay_GetElementData(elementId).boundingBox;
         Vector2 mousePos = GetMousePosition();
 
-        float inputPaddingLeft = 12.0f;
-        float clickRelativeX = mousePos.x - inputBox.x - inputPaddingLeft;
+        // Get scroll offset for this textbox
+        const char *scrollIdStr = TextBoxScrollIds[textBoxEnum];
+        Clay_ElementId scrollId = Clay_GetElementId((Clay_String){ .length = strlen(scrollIdStr), .chars = scrollIdStr });
+        Clay_ScrollContainerData scrollData = Clay_GetScrollContainerData(scrollId);
+        float scrollOffsetX = (scrollData.found && scrollData.scrollPosition) ? scrollData.scrollPosition->x : 0.0f;
 
-        TextInput_UpdateCursorFromClick(&data.textInputs[textBoxEnum], clickRelativeX, data.fonts, FONT_ID_BODY_16);
+        float inputPaddingLeft = 12.0f;
+        float clickRelativeX = mousePos.x - inputBox.x - inputPaddingLeft - scrollOffsetX;
+
+        // Update cursor
+        TextInput *input = &data.textInputs[textBoxEnum];
+
+        if (clickRelativeX < 0)
+        {
+            clickRelativeX = 0;
+        }
+
+        u32 newCursorPos = 0;
+        float prevWidth = 0;
+        for (u32 i = 0; i <= input->len; i++) {
+            char tempBuffer[TEXT_INPUT_MAX_LEN];
+            for (u32 j = 0; j < i; j++) {
+                tempBuffer[j] = input->buffer[j];
+            }
+            tempBuffer[i] = '\0';
+
+            Vector2 textSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], tempBuffer, 16.0f, 0);
+
+            if (clickRelativeX <= textSize.x) {
+                float midpoint = (prevWidth + textSize.x) / 2.0f;
+                if (clickRelativeX < midpoint) {
+                    newCursorPos = i > 0 ? i - 1 : 0;
+                } else {
+                    newCursorPos = i;
+                }
+                break;
+            }
+            prevWidth = textSize.x;
+            newCursorPos = i;
+        }
+        input->cursorPos = newCursorPos;
+        input->blinkTimer = 0.0f;
+    }
+}
+
+void
+HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        TextInput *textInput = &data.textInputs[TEXTBOX_Events];
+        String8 eventName = str8((u8 *)textInput->buffer, textInput->len);
+        // Copy string to persistent arena so it survives after text input changes
+        String8 eventNameCopy = str8_copy(data.arena, eventName);
+        entity_list_add(&data.tournaments, eventNameCopy);
+    }
+}
+
+void
+HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        TextInput *textInput = &data.textInputs[TEXTBOX_Players];
+        String8 playerName = str8((u8 *)textInput->buffer, textInput->len);
+        // Copy string to persistent arena so it survives after text input changes
+        String8 playerNameCopy = str8_copy(data.arena, playerName);
+        entity_list_add(&data.players, playerNameCopy);
+    }
+}
+
+void
+HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        u32 player_idx = (u32)userData;
+        Entity *player = data.players.entities + player_idx;
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+
+        // Check if player is already registered to this tournament
+        bool is_registered = (player->registrations >> ENTITY_IDX_TO_BIT(data.selectedTournamentIdx)) & 1;
+
+        if (is_registered)
+        {
+            entity_list_unregister(&data.players, &data.tournaments, player->name, tournament->name);
+        }
+        else
+        {
+            entity_list_register(&data.players, &data.tournaments, player->name, tournament->name);
+        }
     }
 }
 
@@ -262,7 +318,8 @@ void
 TextInput_Render(TextBoxEnum textBoxEnum, Clay_String elementId,
     Clay_String scrollId, Clay_String placeholder)
 {
-    Clay_Color inputBorderColor = textInputBorderColor;
+    bool isFocused = (data.focusedTextbox == textBoxEnum);
+    Clay_Color inputBorderColor = isFocused ? COLOR_BLUE : textInputBorderColor;
 
     // Outer container: styling (background, border, corner radius)
     CLAY(Clay_GetElementId(elementId), {
@@ -692,7 +749,7 @@ RenderTournamentChart(u32 tournament_idx)
                 .cornerRadius = CLAY_CORNER_RADIUS(4),
                 .border = { .width = {1, 1, 1, 1}, .color = goBackTextColor }
             }) {
-                Clay_OnHover(HandleGoBack, 0);
+                Clay_OnHover(HandleGoBackInteraction, 0);
                 CLAY_TEXT(CLAY_STRING("< Go back"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 14,
@@ -704,6 +761,95 @@ RenderTournamentChart(u32 tournament_idx)
                 .fontSize = 24,
                 .textColor = tournamentTitleColor
             }));
+
+            bool dropdownHovered = Clay_PointerOver(Clay_GetElementId(CLAY_STRING("RegisterPlayersDropdown")))
+                                   ||
+                                   Clay_PointerOver(Clay_GetElementId(CLAY_STRING("PlayerDropdownList")));
+
+            // Player registration dropdown
+            CLAY(CLAY_ID("RegisterPlayersDropdown"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                    .padding = { 10, 10, 6, 6 }
+                },
+                .backgroundColor = Clay_Hovered() ? goBackButtonHoverColor : goBackButtonColor,
+                .cornerRadius = CLAY_CORNER_RADIUS(4),
+                .border = { .width = {1, 1, 1, 1}, .color = goBackTextColor }
+            }) {
+                CLAY_TEXT(CLAY_STRING("Register/Unregister Players"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 14,
+                    .textColor = goBackTextColor
+                }));
+
+                // Floating dropdown that appears on hover
+                if (dropdownHovered)
+                {
+                    // Invisible hover bridge container
+                    CLAY(CLAY_ID("PlayerDropdownList"), {
+                        .layout = {
+                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                            .padding = { 0, 0, 6, 0 }
+                        },
+                        .floating = {
+                            .attachTo = CLAY_ATTACH_TO_PARENT,
+                            .attachPoints = {
+                                .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM,
+                                .element = CLAY_ATTACH_POINT_LEFT_TOP
+                            },
+                            .zIndex = 100
+                        }
+                    }) {
+                        // Actual visible dropdown
+                        CLAY(CLAY_ID("PlayerDropdownListInner"), {
+                            .layout = {
+                                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                .sizing = {.width = CLAY_SIZING_FIXED(200), .height = CLAY_SIZING_FIXED(200)},
+                                .padding = { 4, 4, 4, 4 },
+                                .childGap = 2
+                            },
+                            .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() },
+                            .backgroundColor = COLOR_WHITE,
+                            .cornerRadius = CLAY_CORNER_RADIUS(4),
+                            .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+                        }) {
+                            // Iterate through all players
+                            u32 idx_tail = data.players.len + 1;
+                            u32 idx = (data.players.entities)->nxt;
+                            while (idx != idx_tail)
+                            {
+                                Entity *player = data.players.entities + idx;
+
+                                // Check if player is registered to this tournament
+                                bool is_registered = (player->registrations >> ENTITY_IDX_TO_BIT(tournament_idx)) & 1;
+
+                                Clay_Color rowBgColor = is_registered ? addButtonColor : COLOR_WHITE;
+                                Clay_Color rowTextColor = is_registered ? COLOR_WHITE : stringColor;
+                                Clay_Color rowHoverColor = is_registered ? addButtonHoverColor : playerRowHoverColor;
+
+                                CLAY(CLAY_IDI("PlayerDropdownRow", idx), {
+                                    .layout = {
+                                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                                        .padding = { 10, 10, 8, 8 }
+                                    },
+                                    .backgroundColor = Clay_Hovered() ? rowHoverColor : rowBgColor,
+                                    .cornerRadius = CLAY_CORNER_RADIUS(4)
+                                }) {
+                                    Clay_OnHover(HandleTogglePlayerRegistration, (intptr_t)idx);
+                                    CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 14,
+                                        .textColor = rowTextColor
+                                    }));
+                                }
+
+                                idx = player->nxt;
+                            }
+                        }
+                    }
+                }
+            }
         }
         CLAY(CLAY_ID("TournamentChart"), {
             .layout = {
@@ -904,6 +1050,7 @@ RenderEvents(void)
                     .backgroundColor = Clay_Hovered() ? addButtonHoverColor : addButtonColor,
                     .cornerRadius = CLAY_CORNER_RADIUS(4)
                 }) {
+                    Clay_OnHover(HandleAddEventButtonInteraction, 0);
                     CLAY_TEXT(CLAY_STRING("Add Event"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 16,
@@ -981,7 +1128,7 @@ RenderEvents(void)
                         },
                         .backgroundColor = Clay_Hovered() ? eventElementHoverColor : eventElementColor
                     }) {
-                        Clay_OnHover(HandleEventElementInteraction, (intptr_t)idx);
+                        Clay_OnHover(HandleEventRowInteraction, (intptr_t)idx);
 
                         // Event name
                         CLAY(CLAY_IDI("EventName", idx), {
@@ -1074,6 +1221,7 @@ RenderPlayers(void)
                 .backgroundColor = Clay_Hovered() ? addButtonHoverColor : addButtonColor,
                 .cornerRadius = CLAY_CORNER_RADIUS(4)
             }) {
+                Clay_OnHover(HandleAddPlayerButtonInteraction, 0);
                 CLAY_TEXT(CLAY_STRING("Add Player"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 16,
@@ -1209,7 +1357,7 @@ CreateLayout(void)
             .childGap = 16
         }
     }) {
-        Clay_OnHover(HandleOuterContainerClick, 0);
+        Clay_OnHover(HandleOuterContainerInteraction, 0);
 
         CLAY(CLAY_ID("HeaderBar"), {
             .layout = {
