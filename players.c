@@ -283,3 +283,39 @@ tournament_construct_bracket(EntityList *tournaments, String8 tournament_name)
         player_idx++;
     }
 }
+
+void
+tournament_construct_groups(Entity *tournament, u32 group_size)
+{
+    s32 positions[64];
+    u32 num_players = find_all_filled_slots(tournament->registrations, positions);
+
+    if (num_players == 0)
+    {
+        return;
+    }
+
+    // Clear the group phase data
+    MemoryZeroStruct(&tournament->group_phase);
+
+    tournament->group_phase.group_size = group_size;
+
+    // Calculate number of groups
+    u32 num_groups = num_players / group_size;
+    if (num_players % group_size != 0)
+    {
+        ++num_groups;
+    }
+    tournament->group_phase.num_groups = num_groups;
+
+    for (u32 i = 0; i < num_players; ++i)
+    {
+        u32 global_idx = BIT_TO_ENTITY_IDX(positions[i]);
+        u32 group_number = i / group_size;
+        u32 slot = i % group_size;
+
+        tournament->group_phase.groups[group_number][slot] = global_idx;
+        tournament->group_phase.player_group[global_idx] = group_number + 1;
+        tournament->group_phase.player_slot[global_idx] = slot;
+    }
+}

@@ -291,6 +291,36 @@ HandleStartTournament(Clay_ElementId elementId, Clay_PointerData pointerData, in
     }
 }
 
+void
+HandleReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        tournament->state = TOURNAMENT_REGISTRATION;
+    }
+}
+
+void
+HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        // Toggle between single elimination and groups
+        if (tournament->format == FORMAT_SINGLE_ELIMINATION)
+        {
+            tournament->format = FORMAT_GROUPS_THEN_BRACKET;
+        }
+        else
+        {
+            tournament->format = FORMAT_SINGLE_ELIMINATION;
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Texbox functions
 
@@ -924,6 +954,29 @@ RenderTournamentChart(u32 tournament_idx)
 
                 if (panel_tournament->state == TOURNAMENT_REGISTRATION)
                 {
+                    // Tournament format toggle button
+                    Clay_String format_text = panel_tournament->format == FORMAT_SINGLE_ELIMINATION
+                        ? CLAY_STRING("Format: Single Elim")
+                        : CLAY_STRING("Format: Groups");
+
+                    CLAY(CLAY_ID("FormatToggleButton"), {
+                        .layout = {
+                            .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                            .padding = { 10, 10, 8, 8 },
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                        },
+                        .backgroundColor = Clay_Hovered() ? goBackButtonHoverColor : goBackButtonColor,
+                        .cornerRadius = CLAY_CORNER_RADIUS(4),
+                        .border = { .width = {1, 1, 1, 1}, .color = goBackTextColor }
+                    }) {
+                        Clay_OnHover(HandleToggleTournamentFormat, 0);
+                        CLAY_TEXT(format_text, CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 14,
+                            .textColor = goBackTextColor
+                        }));
+                    }
+
                     // Show "Start Tournament" button if we have enough players
                     if (registered_count >= 2)
                     {
@@ -1075,7 +1128,31 @@ RenderTournamentChart(u32 tournament_idx)
                         .textColor = addButtonColor
                     }));
 
-                    CLAY_TEXT(CLAY_STRING("Click a player name to advance them to the next round."), CLAY_TEXT_CONFIG({
+                    // Return to Registration button
+                    CLAY(CLAY_ID("ReturnToRegistrationButton"), {
+                        .layout = {
+                            .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                            .padding = { 10, 10, 8, 8 },
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                        },
+                        .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : removeButtonColor,
+                        .cornerRadius = CLAY_CORNER_RADIUS(4)
+                    }) {
+                        Clay_OnHover(HandleReturnToRegistration, 0);
+                        CLAY_TEXT(CLAY_STRING("Return to Registration"), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 14,
+                            .textColor = removeTextColor
+                        }));
+                    }
+
+                    CLAY_TEXT(CLAY_STRING("Left click a player name to advance them to the next round."), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = matchVsColor
+                    }));
+
+                    CLAY_TEXT(CLAY_STRING("Right click a player name to undo his advancement"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 14,
                         .textColor = matchVsColor
@@ -1113,13 +1190,6 @@ RenderTournamentChart(u32 tournament_idx)
             }) {
                 Entity *tournament = data.tournaments.entities + tournament_idx;
 
-                // Only reconstruct bracket during registration phase
-                // Once tournament starts, the bracket is locked and only updated by match results
-                if (tournament->state == TOURNAMENT_REGISTRATION)
-                {
-                    tournament_construct_bracket(&data.tournaments, tournament->name);
-                }
-
                 // Get the number of players in the tournament
                 s32 _positions[64] = {0};
                 u32 num_players = find_all_filled_slots(tournament->registrations, _positions);
@@ -1132,8 +1202,15 @@ RenderTournamentChart(u32 tournament_idx)
                         .textColor = matchVsColor
                     }));
                 }
-                else
+                else if (tournament->format == FORMAT_SINGLE_ELIMINATION)
                 {
+                    // Only reconstruct bracket during registration phase
+                    // Once tournament starts, the bracket is locked and only updated by match results
+                    if (tournament->state == TOURNAMENT_REGISTRATION)
+                    {
+                        tournament_construct_bracket(&data.tournaments, tournament->name);
+                    }
+
                     // Calculate bracket size (next power of 2 >= num_players)
                     u32 bracket_size = 1;
                     while (bracket_size < num_players)
@@ -1219,6 +1296,81 @@ RenderTournamentChart(u32 tournament_idx)
                                             }
 
                                             RenderMatchSlot(name1, name2, player1_idx, player2_idx, pos1, pos2, match_id);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else // FORMAT_GROUPS_THEN_BRACKET
+                {
+                    // Only reconstruct groups during registration phase
+                    if (tournament->state == TOURNAMENT_REGISTRATION)
+                    {
+                        // Default group size of 4
+                        tournament_construct_groups(tournament, 4);
+                    }
+
+                    // Get group info from the constructed group phase
+                    u32 group_size = tournament->group_phase.group_size;
+                    u32 num_groups = tournament->group_phase.num_groups;
+
+                    // Render groups in a grid layout
+                    CLAY(CLAY_ID("GroupsContainer"), {
+                        .layout = {
+                            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                            .childGap = 16,
+                            .padding = { 16, 16, 16, 16 }
+                        }
+                    }) {
+                        for (u32 g = 0; g < num_groups; g++)
+                        {
+                            CLAY(CLAY_IDI("Group", g), {
+                                .layout = {
+                                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                    .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                                    .padding = { 12, 12, 12, 12 },
+                                    .childGap = 8
+                                },
+                                .backgroundColor = COLOR_WHITE,
+                                .cornerRadius = CLAY_CORNER_RADIUS(8),
+                                .border = { .width = {1, 1, 1, 1}, .color = matchBorderColor }
+                            }) {
+                                // Group header
+                                String8 group_prefix = str8_lit("Group ");
+                                String8 group_num = str8_u32(data.frameArena, g + 1);
+                                String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
+                                CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
+                                    .fontId = FONT_ID_BODY_16,
+                                    .fontSize = 16,
+                                    .textColor = tournamentTitleColor
+                                }));
+
+                                // Players in this group
+                                for (u32 slot = 0; slot < group_size; slot++)
+                                {
+                                    u8 player_idx = tournament->group_phase.groups[g][slot];
+                                    if (player_idx != 0)
+                                    {
+                                        Entity *player = data.players.entities + player_idx;
+                                        // Use unique ID combining group and slot
+                                        u32 player_slot_id = g * MAX_GROUP_SIZE + slot;
+                                        CLAY(CLAY_IDI("GroupPlayer", player_slot_id), {
+                                            .layout = {
+                                                .sizing = { .width = CLAY_SIZING_FIXED(140), .height = CLAY_SIZING_FIT(0) },
+                                                .padding = { 8, 8, 6, 6 }
+                                            },
+                                            .backgroundColor = playerRowColor,
+                                            .cornerRadius = CLAY_CORNER_RADIUS(4),
+                                            .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+                                        }) {
+                                            CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                                                .fontId = FONT_ID_BODY_16,
+                                                .fontSize = 14,
+                                                .textColor = stringColor
+                                            }));
                                         }
                                     }
                                 }
