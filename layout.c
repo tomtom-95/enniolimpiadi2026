@@ -45,6 +45,19 @@ Clay_Color goBackButtonHoverColor = { 200, 220, 245, 255};
 Clay_Color goBackTextColor        = { 60, 100, 160, 255};
 Clay_Color tournamentTitleColor   = { 40, 40, 60, 255};
 
+// Fun dashboard colors
+Clay_Color dashAccentCoral        = { 255, 107, 107, 255 };  // Coral red
+Clay_Color dashAccentTeal         = { 72, 219, 195, 255 };   // Teal
+Clay_Color dashAccentPurple       = { 155, 89, 182, 255 };   // Purple
+Clay_Color dashAccentGold         = { 241, 196, 15, 255 };   // Golden
+Clay_Color dashAccentOrange       = { 255, 159, 67, 255 };   // Orange
+Clay_Color dashCardShadow         = { 0, 0, 0, 25 };         // Subtle shadow
+Clay_Color dashStatNumber         = { 45, 52, 54, 255 };     // Dark slate for numbers
+Clay_Color dashLabelText          = { 99, 110, 114, 255 };   // Gray for labels
+Clay_Color dashCardBg             = { 253, 253, 253, 255 };  // Slightly warm white
+Clay_Color dashBgGradientTop      = { 250, 247, 255, 255 };  // Light lavender
+Clay_Color dashBgGradientBot      = { 255, 250, 245, 255 };  // Warm cream
+
 Clay_Color textInputBackgroundColor = { 250, 250, 250, 255};
 Clay_Color textInputBorderColor     = { 200, 200, 200, 255};
 Clay_Color addButtonColor           = { 76, 175, 80, 255};
@@ -527,115 +540,309 @@ RenderDashboard(void)
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .sizing = layoutExpand,
-            .childGap = 16,
+            .childGap = 20,
+            .padding = { 8, 8, 8, 8 },
             .childAlignment = {
                 .y = CLAY_ALIGN_Y_TOP
             }
         },
         .clip = { .horizontal = true, .childOffset = Clay_GetScrollOffset() },
-        .backgroundColor = COLOR_OFF_WHITE
+        .backgroundColor = dashBgGradientTop
     }) {
-        CLAY(CLAY_ID("TotalEventsCount"), {
+        // Welcome banner
+        CLAY(CLAY_ID("WelcomeBanner"), {
             .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = {.height = CLAY_SIZING_FIT(0) , .width = CLAY_SIZING_GROW(0)},
-                .padding = { 16, 16, 8, 8 },
-                .childGap = 8
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                .padding = { 24, 24, 20, 20 },
+                .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
             },
-            .backgroundColor = headerButtonColor,
-            .cornerRadius = CLAY_CORNER_RADIUS(5)
+            .backgroundColor = dashAccentPurple,
+            .cornerRadius = CLAY_CORNER_RADIUS(16)
         }) {
-            CLAY_TEXT(CLAY_STRING("Total Events"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
-            }));
-            u32 tournaments_count = entity_list_count(&data.tournaments);
-            String8 tournaments_count_str8 = str8_u32(data.frameArena, tournaments_count); 
-            Clay_String tournaments_count_clay = str8_to_clay(tournaments_count_str8);
-
-            CLAY_TEXT(tournaments_count_clay, CLAY_TEXT_CONFIG({
+            CLAY_TEXT(CLAY_STRING("ENNIOLIMPIADI 2026"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_ORIENTAL_CHICKEN,
-                .fontSize = 22,
-                .textColor = stringColor
+                .fontSize = 36,
+                .textColor = COLOR_WHITE
             }));
         }
-        CLAY(CLAY_ID("TotalPlayersCount"), {
+
+        // Stats row - horizontal cards
+        CLAY(CLAY_ID("StatsRow"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                .childGap = 16
+            }
+        }) {
+            // Events card with coral accent
+            CLAY(CLAY_ID("EventsCardOuter"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)}
+                },
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
+            }) {
+                // Colored accent bar
+                CLAY(CLAY_ID("EventsAccent"), {
+                    .layout = {
+                        .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                    },
+                    .backgroundColor = dashAccentCoral,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
+                // Card content
+                CLAY(CLAY_ID("EventsCard"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                        .padding = { 20, 20, 16, 20 },
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = { 0, 0, 12, 12 }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("EVENTS"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                    u32 tournaments_count = entity_list_count(&data.tournaments);
+                    String8 tournaments_count_str8 = str8_u32(data.frameArena, tournaments_count);
+                    Clay_String tournaments_count_clay = str8_to_clay(tournaments_count_str8);
+                    CLAY_TEXT(tournaments_count_clay, CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontSize = 48,
+                        .textColor = dashAccentCoral
+                    }));
+                }
+            }
+
+            // Players card with teal accent
+            CLAY(CLAY_ID("PlayersCardOuter"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)}
+                },
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
+            }) {
+                CLAY(CLAY_ID("PlayersAccent"), {
+                    .layout = {
+                        .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                    },
+                    .backgroundColor = dashAccentTeal,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
+                CLAY(CLAY_ID("PlayersCard"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                        .padding = { 20, 20, 16, 20 },
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = { 0, 0, 12, 12 }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("PLAYERS"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                    u32 players_count = entity_list_count(&data.players);
+                    String8 players_count_str8 = str8_u32(data.frameArena, players_count);
+                    Clay_String players_count_clay = str8_to_clay(players_count_str8);
+                    CLAY_TEXT(players_count_clay, CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontSize = 48,
+                        .textColor = dashAccentTeal
+                    }));
+                }
+            }
+
+            // Finished events card with gold accent
+            CLAY(CLAY_ID("FinishedCardOuter"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)}
+                },
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
+            }) {
+                CLAY(CLAY_ID("FinishedAccent"), {
+                    .layout = {
+                        .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                    },
+                    .backgroundColor = dashAccentGold,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
+                CLAY(CLAY_ID("FinishedCard"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                        .padding = { 20, 20, 16, 20 },
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = { 0, 0, 12, 12 }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("COMPLETED"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                    CLAY_TEXT(CLAY_STRING("?"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontSize = 48,
+                        .textColor = dashAccentGold
+                    }));
+                }
+            }
+        }
+
+        // Medagliere section - podium style
+        CLAY(CLAY_ID("MedagliereSection"), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = {.height = CLAY_SIZING_FIT(0) , .width = CLAY_SIZING_GROW(0)},
-                .padding = { 16, 16, 8, 8 },
-                .childGap = 8
-            },
-            .backgroundColor = headerButtonColor,
-            .cornerRadius = CLAY_CORNER_RADIUS(5)
+                .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                .childGap = 16
+            }
         }) {
-            CLAY_TEXT(CLAY_STRING("Total Players"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
-            }));
+            // Section header
+            CLAY(CLAY_ID("MedagliereHeader"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                    .padding = { 16, 16, 12, 12 },
+                    .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = dashAccentOrange,
+                .cornerRadius = CLAY_CORNER_RADIUS(10)
+            }) {
+                CLAY_TEXT(CLAY_STRING("MEDAGLIERE"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                    .fontSize = 24,
+                    .textColor = COLOR_WHITE
+                }));
+            }
 
-            u32 players_count = entity_list_count(&data.players);
-            String8 players_count_str8 = str8_u32(data.frameArena, players_count); 
-            Clay_String players_count_clay = str8_to_clay(players_count_str8);
+            // Medal cards row
+            CLAY(CLAY_ID("MedalRow"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                    .childGap = 12
+                }
+            }) {
+                // Gold medal
+                CLAY(CLAY_ID("GoldMedal"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)},
+                        .padding = { 16, 16, 20, 20 },
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = CLAY_CORNER_RADIUS(12),
+                    .border = { .width = {3, 3, 3, 3}, .color = dashAccentGold }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("ORO"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = dashAccentGold
+                    }));
+                    CLAY_TEXT(CLAY_STRING("1st"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontSize = 32,
+                        .textColor = dashAccentGold
+                    }));
+                    CLAY_TEXT(CLAY_STRING("---"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 16,
+                        .textColor = dashLabelText
+                    }));
+                }
 
-            CLAY_TEXT(players_count_clay, CLAY_TEXT_CONFIG({
+                // Silver medal
+                CLAY(CLAY_ID("SilverMedal"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)},
+                        .padding = { 16, 16, 20, 20 },
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = CLAY_CORNER_RADIUS(12),
+                    .border = { .width = {3, 3, 3, 3}, .color = { 192, 192, 192, 255 } }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("ARGENTO"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = { 140, 140, 140, 255 }
+                    }));
+                    CLAY_TEXT(CLAY_STRING("2nd"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontSize = 32,
+                        .textColor = { 140, 140, 140, 255 }
+                    }));
+                    CLAY_TEXT(CLAY_STRING("---"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 16,
+                        .textColor = dashLabelText
+                    }));
+                }
+
+                // Bronze medal
+                CLAY(CLAY_ID("BronzeMedal"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)},
+                        .padding = { 16, 16, 20, 20 },
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = CLAY_CORNER_RADIUS(12),
+                    .border = { .width = {3, 3, 3, 3}, .color = { 205, 127, 50, 255 } }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("BRONZO"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = { 180, 110, 45, 255 }
+                    }));
+                    CLAY_TEXT(CLAY_STRING("3rd"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontSize = 32,
+                        .textColor = { 180, 110, 45, 255 }
+                    }));
+                    CLAY_TEXT(CLAY_STRING("---"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 16,
+                        .textColor = dashLabelText
+                    }));
+                }
+            }
+        }
+
+        // Quick actions / fun section
+        CLAY(CLAY_ID("QuickActions"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                .padding = { 20, 20, 16, 16 },
+                .childGap = 16,
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = dashAccentPurple,
+            .cornerRadius = CLAY_CORNER_RADIUS(12)
+        }) {
+            CLAY_TEXT(CLAY_STRING("Savio merda!"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_ORIENTAL_CHICKEN,
-                .fontSize = 22,
-                .textColor = stringColor
-            }));
-        }
-        CLAY(CLAY_ID("TotalEventsFinished"), {
-            .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = {.height = CLAY_SIZING_FIT(0) , .width = CLAY_SIZING_GROW(0)},
-                .padding = { 16, 16, 8, 8 },
-                .childGap = 8
-            },
-            .backgroundColor = headerButtonColor,
-            .cornerRadius = CLAY_CORNER_RADIUS(5)
-        }) {
-            CLAY_TEXT(CLAY_STRING("Events Finished"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
-            }));
-            CLAY_TEXT(CLAY_STRING("TODO: modify the data structure to track finished events"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
-            }));
-        }
-        CLAY(CLAY_ID("Medagliere"), {
-            .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = {.height = CLAY_SIZING_FIT(0) , .width = CLAY_SIZING_GROW(0)},
-                .padding = { 16, 16, 8, 8 },
-                .childGap = 8
-            },
-            .backgroundColor = headerButtonColor,
-            .cornerRadius = CLAY_CORNER_RADIUS(5)
-        }) {
-            CLAY_TEXT(CLAY_STRING("Medagliere"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
-            }));
-            CLAY_TEXT(CLAY_STRING("Oro: "), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
-            }));
-            CLAY_TEXT(CLAY_STRING("Argento: "), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
-            }));
-            CLAY_TEXT(CLAY_STRING("Bronzo: "), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 18,
-                .textColor = stringColor
+                .fontSize = 20,
+                .textColor = COLOR_WHITE
             }));
         }
     }
@@ -1518,22 +1725,57 @@ RenderEvents(void)
                 .childAlignment = {
                     .y = CLAY_ALIGN_Y_TOP
                 },
-                .childGap = 16
+                .childGap = 20,
+                .padding = { 8, 8, 8, 8 }
             },
-            .backgroundColor = COLOR_OFF_WHITE
+            .backgroundColor = dashBgGradientTop,
+            .clip = { .horizontal = true, .childOffset = Clay_GetScrollOffset() }
         }) {
-            // Header with input field and add button
-            CLAY(CLAY_ID("EventsInputHeader"), {
+            // Section banner
+            CLAY(CLAY_ID("EventsBanner"), {
                 .layout = {
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
                     .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                    .padding = { 16, 16, 12, 12 },
-                    .childGap = 12,
+                    .padding = { 24, 24, 20, 20 },
                     .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
                 },
-                .backgroundColor = COLOR_WHITE,
-                .cornerRadius = CLAY_CORNER_RADIUS(8)
+                .backgroundColor = dashAccentCoral,
+                .cornerRadius = CLAY_CORNER_RADIUS(16)
             }) {
+                CLAY_TEXT(CLAY_STRING("EVENTS"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                    .fontSize = 36,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+
+            // Header with input field and add button
+            CLAY(CLAY_ID("EventsInputHeaderOuter"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
+                },
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
+            }) {
+                // Accent bar
+                CLAY(CLAY_ID("EventsInputAccent"), {
+                    .layout = {
+                        .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                    },
+                    .backgroundColor = dashAccentTeal,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
+                CLAY(CLAY_ID("EventsInputHeader"), {
+                    .layout = {
+                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                        .padding = { 20, 20, 16, 16 },
+                        .childGap = 16,
+                        .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = { 0, 0, 12, 12 }
+                }) {
                 // Process keyboard input when focused
                 if (data.focusedTextbox == TEXTBOX_Events)
                 {
@@ -1547,50 +1789,67 @@ RenderEvents(void)
                 // Add button
                 CLAY(CLAY_ID("AddEventButton"), {
                     .layout = {
-                        .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIXED(40)},
-                        .padding = { 20, 20, 0, 0 },
+                        .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIXED(44)},
+                        .padding = { 24, 24, 0, 0 },
                         .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                     },
-                    .backgroundColor = Clay_Hovered() ? addButtonHoverColor : addButtonColor,
-                    .cornerRadius = CLAY_CORNER_RADIUS(4)
+                    .backgroundColor = Clay_Hovered() ? dashAccentTeal : dashAccentCoral,
+                    .cornerRadius = CLAY_CORNER_RADIUS(10)
                 }) {
                     Clay_OnHover(HandleAddEventButtonInteraction, 0);
-                    CLAY_TEXT(CLAY_STRING("Add Event"), CLAY_TEXT_CONFIG({
+                    CLAY_TEXT(CLAY_STRING("+ Add Event"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 16,
-                        .textColor = addButtonTextColor
+                        .textColor = COLOR_WHITE
                     }));
+                }
                 }
             }
 
-            // Events list container
-            CLAY(CLAY_ID("EventsList"), {
+            // Events list container with accent bar
+            CLAY(CLAY_ID("EventsListOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = layoutExpand,
-                    .childGap = 1,
+                    .sizing = layoutExpand
                 },
-                .cornerRadius = CLAY_CORNER_RADIUS(8),
-                .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
+                // Purple accent bar
+                CLAY(CLAY_ID("EventsListAccent"), {
+                    .layout = {
+                        .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                    },
+                    .backgroundColor = dashAccentPurple,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
+                CLAY(CLAY_ID("EventsList"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = layoutExpand,
+                        .childGap = 2,
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = { 0, 0, 12, 12 },
+                    .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+                }) {
                 // List header
                 CLAY(CLAY_ID("EventsListHeader"), {
                     .layout = {
                         .layoutDirection = CLAY_LEFT_TO_RIGHT,
                         .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                        .padding = { 16, 16, 10, 10 }
+                        .padding = { 20, 20, 12, 12 }
                     },
-                    .backgroundColor = COLOR_WHITE
+                    .backgroundColor = dashCardBg
                 }) {
                     CLAY(CLAY_ID("EventNameHeader"), {
                         .layout = {
                             .sizing = { .width = CLAY_SIZING_GROW(0) }
                         }
                     }) {
-                        CLAY_TEXT(CLAY_STRING("Event Name"), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(CLAY_STRING("EVENT NAME"), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
-                            .fontSize = 16,
-                            .textColor = matchVsColor
+                            .fontSize = 12,
+                            .textColor = dashLabelText
                         }));
                     }
                     CLAY(CLAY_ID("EventPlayersHeader"), {
@@ -1598,10 +1857,10 @@ RenderEvents(void)
                             .sizing = { .width = CLAY_SIZING_FIXED(150) }
                         }
                     }) {
-                        CLAY_TEXT(CLAY_STRING("Players"), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(CLAY_STRING("PLAYERS"), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
-                            .fontSize = 16,
-                            .textColor = matchVsColor
+                            .fontSize = 12,
+                            .textColor = dashLabelText
                         }));
                     }
                     CLAY(CLAY_ID("EventActionsHeader"), {
@@ -1609,10 +1868,10 @@ RenderEvents(void)
                             .sizing = { .width = CLAY_SIZING_FIXED(100) }
                         }
                     }) {
-                        CLAY_TEXT(CLAY_STRING("Actions"), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(CLAY_STRING("ACTIONS"), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
-                            .fontSize = 16,
-                            .textColor = matchVsColor
+                            .fontSize = 12,
+                            .textColor = dashLabelText
                         }));
                     }
                 }
@@ -1628,9 +1887,9 @@ RenderEvents(void)
                         .layout = {
                             .layoutDirection = CLAY_LEFT_TO_RIGHT,
                             .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                            .padding = { 16, 16, 6, 6 }
+                            .padding = { 20, 20, 12, 12 }
                         },
-                        .backgroundColor = Clay_Hovered() ? eventElementHoverColor : eventElementColor
+                        .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
                     }) {
                         Clay_OnHover(HandleEventRowInteraction, (intptr_t)idx);
 
@@ -1638,27 +1897,29 @@ RenderEvents(void)
                         CLAY(CLAY_IDI("EventName", idx), {
                             .layout = {
                                 .sizing = { .width = CLAY_SIZING_GROW(0) },
+                                .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
                             }
                         }) {
                             CLAY_TEXT(str8_to_clay(tournament->name), CLAY_TEXT_CONFIG({
                                 .fontId = FONT_ID_BODY_16,
-                                .fontSize = 16,
-                                .textColor = stringColor
+                                .fontSize = 18,
+                                .textColor = dashAccentPurple
                             }));
                         }
 
                         // Number of players registered
                         CLAY(CLAY_IDI("EventPlayers", idx), {
                             .layout = {
-                                .sizing = { .width = CLAY_SIZING_FIXED(150) }
+                                .sizing = { .width = CLAY_SIZING_FIXED(150) },
+                                .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
                             }
                         }) {
                             s32 positions[64];
                             u32 count = find_all_filled_slots(tournament->registrations, positions);
                             CLAY_TEXT(str8_to_clay(str8_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
-                                .fontId = FONT_ID_BODY_16,
-                                .fontSize = 16,
-                                .textColor = stringColor
+                                .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                                .fontSize = 24,
+                                .textColor = dashAccentTeal
                             }));
                         }
 
@@ -1673,6 +1934,7 @@ RenderEvents(void)
                     }
 
                     idx = tournament->nxt;
+                }
                 }
             }
         }
