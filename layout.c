@@ -38,6 +38,7 @@ Clay_Color eventElementHoverColor = { 250, 250, 250, 255};
 
 Clay_Color matchBorderColor       = { 200, 200, 200, 255};
 Clay_Color matchVsColor           = { 150, 150, 150, 255};
+Clay_Color matrixBorderColor      = { 160, 170, 180, 255};
 
 Clay_Color goBackButtonColor      = { 230, 240, 250, 255};
 Clay_Color goBackButtonHoverColor = { 200, 220, 245, 255};
@@ -879,6 +880,138 @@ RenderByeSlot(u32 match_id)
 }
 
 void
+RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
+{
+    CLAY(CLAY_IDI("GroupMatrix", group_idx), {
+        .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) }
+        }
+    }) {
+        // Header row with player names as columns
+        CLAY(CLAY_IDI("MatrixHeaderRow", group_idx), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) }
+            },
+            .border = { .width = {1, 1, 1, 1}, .color = matrixBorderColor }
+        }) {
+            // Empty corner cell
+            CLAY(CLAY_IDI("MatrixCorner", group_idx), {
+                .layout = {
+                    .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
+                    .padding = { 4, 4, 4, 4 },
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = COLOR_OFF_WHITE,
+            }) {}
+
+            // Column headers (player names)
+            for (u32 col = 0; col < players_in_group; col++)
+            {
+                u8 player_idx = tournament->group_phase.groups[group_idx][col];
+                if (player_idx != 0)
+                {
+                    Entity *player = data.players.entities + player_idx;
+                    u32 header_id = group_idx * MAX_GROUP_SIZE * 2 + col;
+                    CLAY(CLAY_IDI("MatrixColHeader", header_id), {
+                        .layout = {
+                            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                            .padding = { 4, 4, 4, 4 },
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                        },
+                        .backgroundColor = COLOR_OFF_WHITE,
+                        .border = {.width = {1, 0, 0, 0}, .color = matrixBorderColor }
+                    }) {
+                        CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 14,
+                            .textColor = stringColor
+                        }));
+                    }
+                }
+            }
+        }
+
+        // Data rows (one per player)
+        for (u32 row = 0; row < players_in_group; row++)
+        {
+            u8 row_player_idx = tournament->group_phase.groups[group_idx][row];
+            if (row_player_idx != 0)
+            {
+                Entity *row_player = data.players.entities + row_player_idx;
+                u32 row_id = group_idx * MAX_GROUP_SIZE + row;
+
+                CLAY(CLAY_IDI("MatrixRow", row_id), {
+                    .layout = {
+                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) }
+                    },
+                    .border = { .width = {1, 1, 0, 1}, .color = matrixBorderColor }
+                }) {
+                    // Row header (player name)
+                    CLAY(CLAY_IDI("MatrixRowHeader", row_id), {
+                        .layout = {
+                            .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
+                            .padding = { 8, 8, 4, 4 },
+                            .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                        },
+                        .backgroundColor = COLOR_OFF_WHITE,
+                    }) {
+                        CLAY_TEXT(str8_to_clay(row_player->name), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 14,
+                            .textColor = stringColor
+                        }));
+                    }
+
+                    // Result cells
+                    for (u32 col = 0; col < players_in_group; col++)
+                    {
+                        u8 col_player_idx = tournament->group_phase.groups[group_idx][col];
+                        if (col_player_idx != 0)
+                        {
+                            u32 cell_id = group_idx * MAX_GROUP_SIZE * MAX_GROUP_SIZE + row * MAX_GROUP_SIZE + col;
+                            Clay_Color cell_bg = (row == col) ? matchBorderColor : playerRowColor;
+
+                            CLAY(CLAY_IDI("MatrixCell", cell_id), {
+                                .layout = {
+                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                                    .padding = { 4, 4, 4, 4 },
+                                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                                },
+                                .border = { .width = {1, 0, 0, 0}, .color = matrixBorderColor },
+                                .backgroundColor = cell_bg,
+                            }) {
+                                // Diagonal cells (player vs self) show dash
+                                if (row == col)
+                                {
+                                    CLAY_TEXT(CLAY_STRING("-"), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 14,
+                                        .textColor = matchVsColor
+                                    }));
+                                }
+                                else
+                                {
+                                    // Other cells will show match results (empty for now)
+                                    CLAY_TEXT(CLAY_STRING("TBD"), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_BODY_16,
+                                        .fontSize = 14,
+                                        .textColor = matchVsColor
+                                    }));
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void
 RenderTournamentChart(u32 tournament_idx)
 {
     CLAY(CLAY_ID("Tournament"), {
@@ -1316,21 +1449,32 @@ RenderTournamentChart(u32 tournament_idx)
                     u32 group_size = tournament->group_phase.group_size;
                     u32 num_groups = tournament->group_phase.num_groups;
 
-                    // Render groups in a grid layout
+                    // Render groups vertically (one below the other), centered
                     CLAY(CLAY_ID("GroupsContainer"), {
                         .layout = {
-                            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
                             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                            .childGap = 16,
-                            .padding = { 16, 16, 16, 16 }
+                            .childGap = 24,
+                            .padding = { 16, 16, 16, 16 },
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                         }
                     }) {
                         for (u32 g = 0; g < num_groups; g++)
                         {
+                            // Count actual players in this group
+                            u32 players_in_group = 0;
+                            for (u32 slot = 0; slot < group_size; slot++)
+                            {
+                                if (tournament->group_phase.groups[g][slot] != 0)
+                                {
+                                    players_in_group++;
+                                }
+                            }
+
                             CLAY(CLAY_IDI("Group", g), {
                                 .layout = {
                                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                                    .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
                                     .padding = { 12, 12, 12, 12 },
                                     .childGap = 8
                                 },
@@ -1344,36 +1488,11 @@ RenderTournamentChart(u32 tournament_idx)
                                 String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
                                 CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
                                     .fontId = FONT_ID_BODY_16,
-                                    .fontSize = 16,
+                                    .fontSize = 18,
                                     .textColor = tournamentTitleColor
                                 }));
 
-                                // Players in this group
-                                for (u32 slot = 0; slot < group_size; slot++)
-                                {
-                                    u8 player_idx = tournament->group_phase.groups[g][slot];
-                                    if (player_idx != 0)
-                                    {
-                                        Entity *player = data.players.entities + player_idx;
-                                        // Use unique ID combining group and slot
-                                        u32 player_slot_id = g * MAX_GROUP_SIZE + slot;
-                                        CLAY(CLAY_IDI("GroupPlayer", player_slot_id), {
-                                            .layout = {
-                                                .sizing = { .width = CLAY_SIZING_FIXED(140), .height = CLAY_SIZING_FIT(0) },
-                                                .padding = { 8, 8, 6, 6 }
-                                            },
-                                            .backgroundColor = playerRowColor,
-                                            .cornerRadius = CLAY_CORNER_RADIUS(4),
-                                            .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
-                                        }) {
-                                            CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
-                                                .fontId = FONT_ID_BODY_16,
-                                                .fontSize = 14,
-                                                .textColor = stringColor
-                                            }));
-                                        }
-                                    }
-                                }
+                                RenderGroupMatrix(tournament, g, players_in_group);
                             }
                         }
                     }

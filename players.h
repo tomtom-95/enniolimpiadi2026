@@ -11,6 +11,9 @@
 #define MAX_NUM_ENTITIES 64
 #define BRACKET_SIZE 127  // 64 + 32 + 16 + 8 + 4 + 2 + 1
 
+#define MAX_GROUPS 16
+#define MAX_GROUP_SIZE 8
+
 #define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
 #define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
 
@@ -31,18 +34,11 @@ typedef enum TournamentFormat {
     FORMAT_GROUPS_THEN_BRACKET = 1,    
 } TournamentFormat;
 
-typedef struct TournamentGroup TournamentGroup;
-struct TournamentGroup {
-    u32 nxt;
-    u32 prv;
-
-    u32 tournament_idx;
-};
-
-#define MAX_GROUPS 16
-#define MAX_GROUP_SIZE 8
-
-
+typedef enum MatchResult {
+    WIN  = 0,
+    DRAW = 1,
+    LOSE = 2
+} MatchResult;
 
 typedef struct GroupPhase GroupPhase;
 typedef struct GroupPhase {

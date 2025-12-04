@@ -319,3 +319,9 @@ tournament_construct_groups(Entity *tournament, u32 group_size)
         tournament->group_phase.player_slot[global_idx] = slot;
     }
 }
+
+void
+group_phase_add_result(GroupPhase *group_phase, u32 group_num, u32 idx1, u32 idx2, MatchResult match_result)
+{
+    group_phase->results[group_num][idx1][idx2] = match_result;
+}
