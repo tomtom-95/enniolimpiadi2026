@@ -298,25 +298,51 @@ tournament_construct_groups(Entity *tournament, u32 group_size)
     // Clear the group phase data
     MemoryZeroStruct(&tournament->group_phase);
 
-    tournament->group_phase.group_size = group_size;
+    // Calculate number of complete groups and distribute remaining players
+    u32 num_groups;
+    u32 groups_with_extra;  // Number of groups that get +1 player
 
-    // Calculate number of groups
-    u32 num_groups = num_players / group_size;
-    if (num_players % group_size != 0)
+    if (num_players < group_size)
     {
-        ++num_groups;
+        // Not enough players for one full group - put everyone in one group
+        num_groups = 1;
+        groups_with_extra = 0;
+        tournament->group_phase.group_size = num_players;
     }
+    else
+    {
+        // Create complete groups and distribute remaining players among them
+        num_groups = num_players / group_size;
+        groups_with_extra = num_players % group_size;
+        // group_size is the max size any group can have (for iteration in rendering)
+        tournament->group_phase.group_size = group_size + (groups_with_extra > 0 ? 1 : 0);
+    }
+
     tournament->group_phase.num_groups = num_groups;
 
-    for (u32 i = 0; i < num_players; ++i)
+    // Assign players to groups
+    // First `groups_with_extra` groups have (group_size + 1) players
+    u32 player_i = 0;
+    for (u32 g = 0; g < num_groups; g++)
     {
-        u32 global_idx = BIT_TO_ENTITY_IDX(positions[i]);
-        u32 group_number = i / group_size;
-        u32 slot = i % group_size;
+        u32 players_in_this_group;
+        if (num_players < group_size)
+        {
+            players_in_this_group = num_players;
+        }
+        else
+        {
+            players_in_this_group = group_size + (g < groups_with_extra ? 1 : 0);
+        }
 
-        tournament->group_phase.groups[group_number][slot] = global_idx;
-        tournament->group_phase.player_group[global_idx] = group_number + 1;
-        tournament->group_phase.player_slot[global_idx] = slot;
+        for (u32 s = 0; s < players_in_this_group; s++)
+        {
+            u32 global_idx = BIT_TO_ENTITY_IDX(positions[player_i]);
+            tournament->group_phase.groups[g][s] = global_idx;
+            tournament->group_phase.player_group[global_idx] = g + 1;
+            tournament->group_phase.player_slot[global_idx] = s;
+            player_i++;
+        }
     }
 }
 
