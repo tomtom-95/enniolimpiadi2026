@@ -1,4 +1,3 @@
-#include "../clay.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "stdint.h"
@@ -6,31 +5,13 @@
 #include "stdio.h"
 #include "stdlib.h"
 
+#include "../clay.h"
+#include "../layout.h"
+
 #define CLAY_RECTANGLE_TO_RAYLIB_RECTANGLE(rectangle) (Rectangle) { .x = rectangle.x, .y = rectangle.y, .width = rectangle.width, .height = rectangle.height }
 #define CLAY_COLOR_TO_RAYLIB_COLOR(color) (Color) { .r = (unsigned char)roundf(color.r), .g = (unsigned char)roundf(color.g), .b = (unsigned char)roundf(color.b), .a = (unsigned char)roundf(color.a) }
 
 Camera Raylib_camera;
-
-typedef enum
-{
-    CUSTOM_LAYOUT_ELEMENT_TYPE_3D_MODEL
-} CustomLayoutElementType;
-
-typedef struct
-{
-    Model model;
-    float scale;
-    Vector3 position;
-    Matrix rotation;
-} CustomLayoutElement_3DModel;
-
-typedef struct
-{
-    CustomLayoutElementType type;
-    union {
-        CustomLayoutElement_3DModel model;
-    } customData;
-} CustomLayoutElement;
 
 // Get a ray trace from the screen position (i.e mouse) within a specific section of the screen
 Ray
@@ -256,6 +237,111 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                         BeginMode3D(Raylib_camera);
                             DrawModel(customElement->customData.model.model, positionRay.position, customElement->customData.model.scale * scaleValue, WHITE);        // Draw 3d model with texture
                         EndMode3D();
+                        break;
+                    }
+                    case CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS: {
+                        CustomLayoutElement_BracketConnections *bracketData = &customElement->customData.bracketConnections;
+                        uint32_t num_players = bracketData->num_players;
+                        float yOffset = bracketData->yOffset;
+
+                        if (num_players < 2) break;
+
+                        // Calculate bracket size (next power of 2 >= num_players)
+                        uint32_t bracket_size = 1;
+                        while (bracket_size < num_players) bracket_size <<= 1;
+
+                        // Calculate number of rounds
+                        uint32_t num_rounds = 0;
+                        uint32_t temp = bracket_size;
+                        while (temp > 1) {
+                            temp >>= 1;
+                            num_rounds++;
+                        }
+
+                        // Get the TournamentChart bounding box for clipping
+                        Clay_ElementData chartData = Clay_GetElementData(
+                            Clay_GetElementId(CLAY_STRING("TournamentChart")));
+
+                        if (!chartData.found) break;
+
+                        Clay_BoundingBox chartBox = chartData.boundingBox;
+                        chartBox.y += yOffset;
+
+                        // Enable scissor mode to clip curves to the chart area
+                        BeginScissorMode(
+                            (int)chartBox.x,
+                            (int)chartBox.y,
+                            (int)chartBox.width,
+                            (int)chartBox.height
+                        );
+
+                        // Line color and thickness (Teal to match theme)
+                        Color lineColor = { 72, 219, 195, 255 };
+                        float thickness = 2.0f;
+
+                        // Draw connections for each round after the first
+                        for (uint32_t round = 1; round < num_rounds; round++)
+                        {
+                            uint32_t matches_in_round = bracket_size >> (round + 1);
+
+                            for (uint32_t match = 0; match < matches_in_round; match++)
+                            {
+                                uint32_t current_match_id = round * 100 + match;
+                                uint32_t feeder1_match_id = (round - 1) * 100 + (match * 2);
+                                uint32_t feeder2_match_id = (round - 1) * 100 + (match * 2 + 1);
+
+                                // Get bounding boxes
+                                Clay_ElementData current_data = Clay_GetElementData(
+                                    Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), current_match_id));
+                                Clay_ElementData feeder1_data = Clay_GetElementData(
+                                    Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder1_match_id));
+                                Clay_ElementData feeder2_data = Clay_GetElementData(
+                                    Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder2_match_id));
+
+                                if (!current_data.found || !feeder1_data.found || !feeder2_data.found)
+                                    continue;
+
+                                Clay_BoundingBox current_box = current_data.boundingBox;
+                                Clay_BoundingBox feeder1_box = feeder1_data.boundingBox;
+                                Clay_BoundingBox feeder2_box = feeder2_data.boundingBox;
+
+                                // Apply global y offset
+                                current_box.y += yOffset;
+                                feeder1_box.y += yOffset;
+                                feeder2_box.y += yOffset;
+
+                                // Start points (right edge, vertical center of feeder matches)
+                                Vector2 start1 = {
+                                    feeder1_box.x + feeder1_box.width,
+                                    feeder1_box.y + feeder1_box.height / 2.0f
+                                };
+                                Vector2 start2 = {
+                                    feeder2_box.x + feeder2_box.width,
+                                    feeder2_box.y + feeder2_box.height / 2.0f
+                                };
+
+                                // End point (left edge, vertical center of current match)
+                                Vector2 end = {
+                                    current_box.x,
+                                    current_box.y + current_box.height / 2.0f
+                                };
+
+                                // Control points for smooth S-shaped bezier curves
+                                float midX = (start1.x + end.x) / 2.0f;
+
+                                Vector2 ctrl1_1 = { midX, start1.y };
+                                Vector2 ctrl1_2 = { midX, end.y };
+
+                                Vector2 ctrl2_1 = { midX, start2.y };
+                                Vector2 ctrl2_2 = { midX, end.y };
+
+                                // Draw bezier curves
+                                DrawSplineSegmentBezierCubic(start1, ctrl1_1, ctrl1_2, end, thickness, lineColor);
+                                DrawSplineSegmentBezierCubic(start2, ctrl2_1, ctrl2_2, end, thickness, lineColor);
+                            }
+                        }
+
+                        EndScissorMode();
                         break;
                     }
                     default: break;

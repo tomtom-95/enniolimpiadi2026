@@ -9,6 +9,7 @@
 #include "layout.h"
 
 #include "raylib/raylib.h"
+// #include "custom_elements.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Colors
@@ -1858,6 +1859,19 @@ RenderTournamentRightPanel(u32 tournament_idx)
             if (tournament->format == FORMAT_SINGLE_ELIMINATION)
             {
                 RenderSingleEliminationBracket(tournament, num_players);
+
+                // Custom element for drawing bezier curve connections
+                // This is rendered as part of Clay's render commands, in the correct z-order
+                static CustomLayoutElement bracketConnectionsElement;
+                bracketConnectionsElement.type = CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS;
+                bracketConnectionsElement.customData.bracketConnections.num_players = num_players;
+                bracketConnectionsElement.customData.bracketConnections.zoom = data.chartZoomLevel;
+                bracketConnectionsElement.customData.bracketConnections.yOffset = data.yOffset;
+
+                CLAY(CLAY_ID("BracketConnections"), {
+                    .layout = { .sizing = { .width = CLAY_SIZING_FIXED(0), .height = CLAY_SIZING_FIXED(0) } },
+                    .custom = { .customData = &bracketConnectionsElement }
+                }) {}
             }
             else // FORMAT_GROUPS_THEN_BRACKET
             {
@@ -2431,96 +2445,99 @@ RenderResults(void)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Modal Overlay (drawn with raylib after bezier curves so curves stay visible)
+// Modal Overlay (pure Clay implementation)
+
+static Clay_Color modalOverlayColor = { 0, 0, 0, 150 };
 
 void
-DrawConfirmationModal(int screenWidth, int screenHeight)
+RenderConfirmationModal(void)
 {
     if (!data.showReturnToRegistrationConfirm) return;
 
-    // Draw semi-transparent overlay
-    DrawRectangle(0, 0, screenWidth, screenHeight, (Color){ 0, 0, 0, 150 });
-
-    // Dialog dimensions
-    float dialogWidth = 340;
-    float dialogHeight = 160;
-    float dialogX = (screenWidth - dialogWidth) / 2;
-    float dialogY = (screenHeight - dialogHeight) / 2;
-
-    // Draw dialog background
-    DrawRectangleRounded(
-        (Rectangle){ dialogX, dialogY, dialogWidth, dialogHeight },
-        0.08f, 8, (Color){ 253, 253, 253, 255 }
-    );
-
-    // Draw dialog border
-    DrawRectangleRoundedLinesEx(
-        (Rectangle){ dialogX, dialogY, dialogWidth, dialogHeight },
-        0.08f, 8, 3, (Color){ 255, 107, 107, 255 }
-    );
-
-    // Draw title
-    const char *title = "Are you sure?";
-    Vector2 titleSize = MeasureTextEx(data.fonts[FONT_ID_PRESS_START_2P], title, 18, 0);
-    DrawTextEx(data.fonts[FONT_ID_PRESS_START_2P], title,
-        (Vector2){ dialogX + (dialogWidth - titleSize.x) / 2, dialogY + 20 },
-        18, 0, (Color){ 255, 107, 107, 255 });
-
-    // Draw warning message
-    const char *warning = "All tournament progress will be lost.";
-    Vector2 warningSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], warning, 14, 0);
-    DrawTextEx(data.fonts[FONT_ID_BODY_16], warning,
-        (Vector2){ dialogX + (dialogWidth - warningSize.x) / 2, dialogY + 50 },
-        14, 0, (Color){ 150, 150, 150, 255 });
-
-    // Button dimensions
-    float buttonWidth = 140;
-    float buttonHeight = 36;
-    float buttonY = dialogY + dialogHeight - buttonHeight - 20;
-    float buttonGap = 16;
-    float buttonsStartX = dialogX + (dialogWidth - buttonWidth * 2 - buttonGap) / 2;
-
-    // Yes button
-    Rectangle yesButtonRect = { buttonsStartX, buttonY, buttonWidth, buttonHeight };
-    Vector2 mousePos = GetMousePosition();
-    bool yesHovered = CheckCollisionPointRec(mousePos, yesButtonRect);
-
-    Color yesColor = yesHovered ? (Color){ 255, 205, 210, 255 } : (Color){ 255, 107, 107, 255 };
-    DrawRectangleRounded(yesButtonRect, 0.2f, 8, yesColor);
-
-    const char *yesText = "Yes, reset";
-    Vector2 yesTextSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], yesText, 14, 0);
-    DrawTextEx(data.fonts[FONT_ID_BODY_16], yesText,
-        (Vector2){ yesButtonRect.x + (buttonWidth - yesTextSize.x) / 2,
-                   yesButtonRect.y + (buttonHeight - yesTextSize.y) / 2 },
-        14, 0, WHITE);
-
-    // Cancel button
-    Rectangle cancelButtonRect = { buttonsStartX + buttonWidth + buttonGap, buttonY, buttonWidth, buttonHeight };
-    bool cancelHovered = CheckCollisionPointRec(mousePos, cancelButtonRect);
-
-    Color cancelColor = cancelHovered ? (Color){ 155, 89, 182, 255 } : (Color){ 72, 219, 195, 255 };
-    DrawRectangleRounded(cancelButtonRect, 0.2f, 8, cancelColor);
-
-    const char *cancelText = "Cancel";
-    Vector2 cancelTextSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], cancelText, 14, 0);
-    DrawTextEx(data.fonts[FONT_ID_BODY_16], cancelText,
-        (Vector2){ cancelButtonRect.x + (buttonWidth - cancelTextSize.x) / 2,
-                   cancelButtonRect.y + (buttonHeight - cancelTextSize.y) / 2 },
-        14, 0, WHITE);
-
-    // Handle button clicks
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-    {
-        if (yesHovered)
-        {
-            Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
-            tournament->state = TOURNAMENT_REGISTRATION;
-            data.showReturnToRegistrationConfirm = false;
+    // Full-screen overlay that blocks all interactions
+    CLAY(CLAY_ID("ModalOverlay"), {
+        .layout = {
+            .sizing = layoutExpand,
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        },
+        .backgroundColor = modalOverlayColor,
+        .floating = {
+            .attachTo = CLAY_ATTACH_TO_ROOT,
+            .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
+            .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_CAPTURE
         }
-        else if (cancelHovered)
-        {
-            data.showReturnToRegistrationConfirm = false;
+    }) {
+        // Confirmation dialog box
+        CLAY(CLAY_ID("ConfirmDialog"), {
+            .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = {.width = CLAY_SIZING_FIXED(340), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 24, 24, 20, 20 },
+                .childGap = 16,
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+            },
+            .backgroundColor = dashCardBg,
+            .cornerRadius = CLAY_CORNER_RADIUS(12),
+            .border = { .width = {3, 3, 3, 3}, .color = dashAccentCoral }
+        }) {
+            // Title
+            CLAY_TEXT(CLAY_STRING("Are you sure?"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_PRESS_START_2P,
+                .fontSize = 18,
+                .textColor = dashAccentCoral
+            }));
+
+            // Warning message
+            CLAY_TEXT(CLAY_STRING("All tournament progress will be lost."), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 14,
+                .textColor = matchVsColor
+            }));
+
+            // Buttons row
+            CLAY(CLAY_ID("ModalButtonsRow"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .childGap = 16
+                }
+            }) {
+                // Yes button
+                CLAY(CLAY_ID("ModalYesButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 16, 16, 10, 10 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : dashAccentCoral,
+                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                }) {
+                    Clay_OnHover(HandleConfirmReturnToRegistration, 0);
+                    CLAY_TEXT(CLAY_STRING("Yes, reset"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+
+                // Cancel button
+                CLAY(CLAY_ID("ModalCancelButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 16, 16, 10, 10 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                }) {
+                    Clay_OnHover(HandleCancelReturnToRegistration, 0);
+                    CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
         }
     }
 }
@@ -2580,6 +2597,9 @@ CreateLayout(void)
                 RenderResults();
                 break;
         }
+
+        // Render modal overlay (floating, rendered last so it appears on top)
+        RenderConfirmationModal();
     }
 
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();
@@ -2588,110 +2608,4 @@ CreateLayout(void)
         Clay_RenderCommandArray_Get(&renderCommands, i)->boundingBox.y += data.yOffset;
     }
     return renderCommands;
-}
-
-void
-DrawBracketConnections(u32 num_players)
-{
-    if (num_players < 2)
-        return;
-
-    // Calculate bracket size (next power of 2 >= num_players)
-    u32 bracket_size = 1;
-    while (bracket_size < num_players)
-        bracket_size <<= 1;
-
-    // Calculate number of rounds
-    u32 num_rounds = 0;
-    u32 temp = bracket_size;
-    while (temp > 1) {
-        temp >>= 1;
-        num_rounds++;
-    }
-
-    // Get the TournamentChart bounding box for clipping
-    Clay_ElementData chartData = Clay_GetElementData(
-        Clay_GetElementId(CLAY_STRING("TournamentChart")));
-
-    if (!chartData.found)
-        return;
-
-    Clay_BoundingBox chartBox = chartData.boundingBox;
-    chartBox.y += data.yOffset;
-
-    // Enable scissor mode to clip curves to the chart area
-    BeginScissorMode(
-        (int)chartBox.x,
-        (int)chartBox.y,
-        (int)chartBox.width,
-        (int)chartBox.height
-    );
-
-    // Line color and thickness (Teal to match theme)
-    Color lineColor = { 72, 219, 195, 255 };
-    float thickness = 2.0f;
-
-    // Draw connections for each round after the first
-    for (u32 round = 1; round < num_rounds; round++)
-    {
-        u32 matches_in_round = bracket_size >> (round + 1);
-
-        for (u32 match = 0; match < matches_in_round; match++)
-        {
-            u32 current_match_id = round * 100 + match;
-            u32 feeder1_match_id = (round - 1) * 100 + (match * 2);
-            u32 feeder2_match_id = (round - 1) * 100 + (match * 2 + 1);
-
-            // Get bounding boxes
-            Clay_ElementData current_data = Clay_GetElementData(
-                Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), current_match_id));
-            Clay_ElementData feeder1_data = Clay_GetElementData(
-                Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder1_match_id));
-            Clay_ElementData feeder2_data = Clay_GetElementData(
-                Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder2_match_id));
-
-            if (!current_data.found || !feeder1_data.found || !feeder2_data.found)
-                continue;
-
-            Clay_BoundingBox current_box = current_data.boundingBox;
-            Clay_BoundingBox feeder1_box = feeder1_data.boundingBox;
-            Clay_BoundingBox feeder2_box = feeder2_data.boundingBox;
-
-            // Apply global y offset
-            current_box.y += data.yOffset;
-            feeder1_box.y += data.yOffset;
-            feeder2_box.y += data.yOffset;
-
-            // Start points (right edge, vertical center of feeder matches)
-            Vector2 start1 = {
-                feeder1_box.x + feeder1_box.width,
-                feeder1_box.y + feeder1_box.height / 2.0f
-            };
-            Vector2 start2 = {
-                feeder2_box.x + feeder2_box.width,
-                feeder2_box.y + feeder2_box.height / 2.0f
-            };
-
-            // End point (left edge, vertical center of current match)
-            Vector2 end = {
-                current_box.x,
-                current_box.y + current_box.height / 2.0f
-            };
-
-            // Control points for smooth S-shaped bezier curves
-            float midX = (start1.x + end.x) / 2.0f;
-
-            Vector2 ctrl1_1 = { midX, start1.y };
-            Vector2 ctrl1_2 = { midX, end.y };
-
-            Vector2 ctrl2_1 = { midX, start2.y };
-            Vector2 ctrl2_2 = { midX, end.y };
-
-            // Draw bezier curves
-            DrawSplineSegmentBezierCubic(start1, ctrl1_1, ctrl1_2, end, thickness, lineColor);
-            DrawSplineSegmentBezierCubic(start2, ctrl2_1, ctrl2_2, end, thickness, lineColor);
-        }
-    }
-
-    EndScissorMode();
 }

@@ -92,6 +92,36 @@ typedef struct {
     int32_t requestedDocumentIndex;
 } SidebarClickData;
 
+typedef enum
+{
+    CUSTOM_LAYOUT_ELEMENT_TYPE_3D_MODEL,
+    CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS
+} CustomLayoutElementType;
+
+typedef struct
+{
+    Model model;
+    float scale;
+    Vector3 position;
+    Matrix rotation;
+} CustomLayoutElement_3DModel;
+
+typedef struct
+{
+    u32 num_players;
+    float zoom;
+    float yOffset;
+} CustomLayoutElement_BracketConnections;
+
+typedef struct
+{
+    CustomLayoutElementType type;
+    union {
+        CustomLayoutElement_3DModel model;
+        CustomLayoutElement_BracketConnections bracketConnections;
+    } customData;
+} CustomLayoutElement;
+
 // // Utility Functions
 // Clay_String str8_to_clay(String8 str);
 // 
