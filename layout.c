@@ -74,7 +74,7 @@ Clay_Color playerRowHoverColor      = { 245, 245, 245, 255};
 // Globals
 
 const int FONT_ID_BODY_16 = 0;
-const int FONT_ID_ORIENTAL_CHICKEN   = 1;
+const int FONT_ID_PRESS_START_2P  = 1;
 
 const float SLOT_PLAYER_FONT_SIZE = 16.0f;
 
@@ -576,7 +576,7 @@ RenderDashboard(void)
             .cornerRadius = CLAY_CORNER_RADIUS(16)
         }) {
             CLAY_TEXT(CLAY_STRING("ENNIOLIMPIADI 2026"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                .fontId = FONT_ID_PRESS_START_2P,
                 .fontSize = 36,
                 .textColor = COLOR_WHITE
             }));
@@ -627,7 +627,7 @@ RenderDashboard(void)
                     String8 tournaments_count_str8 = str8_u32(data.frameArena, tournaments_count);
                     Clay_String tournaments_count_clay = str8_to_clay(tournaments_count_str8);
                     CLAY_TEXT(tournaments_count_clay, CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 48,
                         .textColor = dashAccentCoral
                     }));
@@ -669,7 +669,7 @@ RenderDashboard(void)
                     String8 players_count_str8 = str8_u32(data.frameArena, players_count);
                     Clay_String players_count_clay = str8_to_clay(players_count_str8);
                     CLAY_TEXT(players_count_clay, CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 48,
                         .textColor = dashAccentTeal
                     }));
@@ -708,7 +708,7 @@ RenderDashboard(void)
                         .textColor = dashLabelText
                     }));
                     CLAY_TEXT(CLAY_STRING("?"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 48,
                         .textColor = dashAccentGold
                     }));
@@ -736,7 +736,7 @@ RenderDashboard(void)
                 .cornerRadius = CLAY_CORNER_RADIUS(10)
             }) {
                 CLAY_TEXT(CLAY_STRING("MEDAGLIERE"), CLAY_TEXT_CONFIG({
-                    .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                    .fontId = FONT_ID_PRESS_START_2P,
                     .fontSize = 24,
                     .textColor = COLOR_WHITE
                 }));
@@ -769,7 +769,7 @@ RenderDashboard(void)
                         .textColor = dashAccentGold
                     }));
                     CLAY_TEXT(CLAY_STRING("1st"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 32,
                         .textColor = dashAccentGold
                     }));
@@ -799,7 +799,7 @@ RenderDashboard(void)
                         .textColor = { 140, 140, 140, 255 }
                     }));
                     CLAY_TEXT(CLAY_STRING("2nd"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 32,
                         .textColor = { 140, 140, 140, 255 }
                     }));
@@ -829,7 +829,7 @@ RenderDashboard(void)
                         .textColor = { 180, 110, 45, 255 }
                     }));
                     CLAY_TEXT(CLAY_STRING("3rd"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                        .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 32,
                         .textColor = { 180, 110, 45, 255 }
                     }));
@@ -855,7 +855,7 @@ RenderDashboard(void)
             .cornerRadius = CLAY_CORNER_RADIUS(12)
         }) {
             CLAY_TEXT(CLAY_STRING("Savio merda!"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                .fontId = FONT_ID_PRESS_START_2P,
                 .fontSize = 20,
                 .textColor = COLOR_WHITE
             }));
@@ -905,19 +905,17 @@ RenderEventsActionsButtons(void)
 {
     CLAY_AUTO_ID({
         .layout = {
-            .sizing = {.height = CLAY_SIZING_FIT(0) , .width = CLAY_SIZING_GROW(0)},
-            .childGap = 8
-        }
+            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+            .padding = { 12, 12, 6, 6 },
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        },
+        .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : removeButtonColor,
+        .cornerRadius = CLAY_CORNER_RADIUS(8)
     }) {
-        CLAY_TEXT(CLAY_STRING("Edit"), CLAY_TEXT_CONFIG({
-            .fontId = FONT_ID_BODY_16,
-            .fontSize = 16,
-            .textColor = COLOR_BLUE
-        }));
         CLAY_TEXT(CLAY_STRING("Delete"), CLAY_TEXT_CONFIG({
             .fontId = FONT_ID_BODY_16,
-            .fontSize = 16,
-            .textColor = COLOR_RED
+            .fontSize = 14,
+            .textColor = removeTextColor
         }));
     }
 }
@@ -1121,7 +1119,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
             // Empty corner cell
             CLAY(CLAY_IDI("MatrixCorner", group_idx), {
                 .layout = {
-                    .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
+                    .sizing = { .width = CLAY_SIZING_FIXED(80), .height = CLAY_SIZING_FIT(0) },
                     .padding = { 4, 4, 4, 4 },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                 },
@@ -1174,7 +1172,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                     // Row header (player name)
                     CLAY(CLAY_IDI("MatrixRowHeader", row_id), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
+                            .sizing = { .width = CLAY_SIZING_FIXED(80), .height = CLAY_SIZING_FIT(0) },
                             .padding = { 8, 8, 4, 4 },
                             .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
                         },
@@ -1729,13 +1727,13 @@ RenderEvents(void)
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
                     .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                     .padding = { 24, 24, 20, 20 },
-                    .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                 },
                 .backgroundColor = dashAccentCoral,
                 .cornerRadius = CLAY_CORNER_RADIUS(16)
             }) {
                 CLAY_TEXT(CLAY_STRING("EVENTS"), CLAY_TEXT_CONFIG({
-                    .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                    .fontId = FONT_ID_PRESS_START_2P,
                     .fontSize = 36,
                     .textColor = COLOR_WHITE
                 }));
@@ -1879,6 +1877,7 @@ RenderEvents(void)
                         .layout = {
                             .layoutDirection = CLAY_LEFT_TO_RIGHT,
                             .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
                             .padding = { 20, 20, 12, 12 }
                         },
                         .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
@@ -1909,7 +1908,7 @@ RenderEvents(void)
                             s32 positions[64];
                             u32 count = find_all_filled_slots(tournament->registrations, positions);
                             CLAY_TEXT(str8_to_clay(str8_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
-                                .fontId = FONT_ID_ORIENTAL_CHICKEN,
+                                .fontId = FONT_ID_PRESS_START_2P,
                                 .fontSize = 24,
                                 .textColor = dashAccentTeal
                             }));
@@ -1943,22 +1942,57 @@ RenderPlayers(void)
             .childAlignment = {
                 .y = CLAY_ALIGN_Y_TOP
             },
-            .childGap = 16
+            .childGap = 20,
+            .padding = { 8, 8, 8, 8 }
         },
-        .backgroundColor = COLOR_OFF_WHITE
+        .backgroundColor = dashBgGradientTop,
+        .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
     }) {
-        // Header with input field and add button
-        CLAY(CLAY_ID("PlayersHeader"), {
+        // Section banner
+        CLAY(CLAY_ID("PlayersBanner"), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                .padding = { 16, 16, 12, 12 },
-                .childGap = 12,
-                .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                .padding = { 24, 24, 20, 20 },
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
             },
-            .backgroundColor = COLOR_WHITE,
-            .cornerRadius = CLAY_CORNER_RADIUS(8)
+            .backgroundColor = dashAccentPurple,
+            .cornerRadius = CLAY_CORNER_RADIUS(16)
         }) {
+            CLAY_TEXT(CLAY_STRING("PLAYERS"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_PRESS_START_2P,
+                .fontSize = 36,
+                .textColor = COLOR_WHITE
+            }));
+        }
+
+        // Header with input field and add button
+        CLAY(CLAY_ID("PlayersInputHeaderOuter"), {
+            .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
+            },
+            .cornerRadius = CLAY_CORNER_RADIUS(12)
+        }) {
+            // Accent bar
+            CLAY(CLAY_ID("PlayersInputAccent"), {
+                .layout = {
+                    .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                },
+                .backgroundColor = dashAccentCoral,
+                .cornerRadius = { 12, 12, 0, 0 }
+            }) {}
+            CLAY(CLAY_ID("PlayersInputHeader"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                    .padding = { 20, 20, 16, 16 },
+                    .childGap = 16,
+                    .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = dashCardBg,
+                .cornerRadius = { 0, 0, 12, 12 }
+            }) {
             // Process keyboard input when focused
             if (data.focusedTextbox == TEXTBOX_Players)
             {
@@ -1972,50 +2006,67 @@ RenderPlayers(void)
             // Add button
             CLAY(CLAY_ID("AddPlayerButton"), {
                 .layout = {
-                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIXED(40)},
-                    .padding = { 20, 20, 0, 0 },
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIXED(44)},
+                    .padding = { 24, 24, 0, 0 },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                 },
-                .backgroundColor = Clay_Hovered() ? addButtonHoverColor : addButtonColor,
-                .cornerRadius = CLAY_CORNER_RADIUS(4)
+                .backgroundColor = Clay_Hovered() ? dashAccentTeal : dashAccentCoral,
+                .cornerRadius = CLAY_CORNER_RADIUS(10)
             }) {
                 Clay_OnHover(HandleAddPlayerButtonInteraction, 0);
-                CLAY_TEXT(CLAY_STRING("Add Player"), CLAY_TEXT_CONFIG({
+                CLAY_TEXT(CLAY_STRING("+ Add Player"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 16,
-                    .textColor = addButtonTextColor
+                    .textColor = COLOR_WHITE
                 }));
+            }
             }
         }
 
-        // Players list container
-        CLAY(CLAY_ID("PlayersList"), {
+        // Players list container with accent bar
+        CLAY(CLAY_ID("PlayersListOuter"), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = layoutExpand,
-                .childGap = 1
+                .sizing = layoutExpand
             },
-            .cornerRadius = CLAY_CORNER_RADIUS(8),
-            .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+            .cornerRadius = CLAY_CORNER_RADIUS(12)
         }) {
+            // Teal accent bar
+            CLAY(CLAY_ID("PlayersListAccent"), {
+                .layout = {
+                    .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                },
+                .backgroundColor = dashAccentTeal,
+                .cornerRadius = { 12, 12, 0, 0 }
+            }) {}
+            CLAY(CLAY_ID("PlayersList"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = layoutExpand,
+                    .childGap = 2,
+                },
+                .backgroundColor = dashCardBg,
+                .cornerRadius = { 0, 0, 12, 12 },
+                .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+            }) {
             // List header
             CLAY(CLAY_ID("PlayersListHeader"), {
                 .layout = {
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
                     .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                    .padding = { 16, 16, 10, 10 }
+                    .padding = { 20, 20, 12, 12 }
                 },
-                .backgroundColor = COLOR_WHITE
+                .backgroundColor = dashCardBg
             }) {
                 CLAY(CLAY_ID("PlayerNameHeader"), {
                     .layout = {
                         .sizing = { .width = CLAY_SIZING_GROW(0) }
                     }
                 }) {
-                    CLAY_TEXT(CLAY_STRING("Player Name"), CLAY_TEXT_CONFIG({
+                    CLAY_TEXT(CLAY_STRING("PLAYER NAME"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
-                        .fontSize = 16,
-                        .textColor = matchVsColor
+                        .fontSize = 12,
+                        .textColor = dashLabelText
                     }));
                 }
                 CLAY(CLAY_ID("PlayerRegistrationsHeader"), {
@@ -2023,10 +2074,10 @@ RenderPlayers(void)
                         .sizing = { .width = CLAY_SIZING_FIXED(150) }
                     }
                 }) {
-                    CLAY_TEXT(CLAY_STRING("Registrations"), CLAY_TEXT_CONFIG({
+                    CLAY_TEXT(CLAY_STRING("REGISTRATIONS"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
-                        .fontSize = 16,
-                        .textColor = matchVsColor
+                        .fontSize = 12,
+                        .textColor = dashLabelText
                     }));
                 }
             }
@@ -2042,40 +2093,44 @@ RenderPlayers(void)
                     .layout = {
                         .layoutDirection = CLAY_LEFT_TO_RIGHT,
                         .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                        .padding = { 16, 16, 6, 6 }
+                        .childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
+                        .padding = { 20, 20, 12, 12 }
                     },
-                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor
+                    .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
                 }) {
                     // Player name
                     CLAY(CLAY_IDI("PlayerName", idx), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_GROW(0) }
+                            .sizing = { .width = CLAY_SIZING_GROW(0) },
+                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
                         }
                     }) {
                         CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
-                            .fontSize = 16,
-                            .textColor = stringColor
+                            .fontSize = 18,
+                            .textColor = dashAccentPurple
                         }));
                     }
 
                     // Number of registrations
                     CLAY(CLAY_IDI("PlayerRegistrations", idx), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIXED(150) }
+                            .sizing = { .width = CLAY_SIZING_FIXED(150) },
+                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
                         }
                     }) {
                         s32 positions[64];
                         u32 count = find_all_filled_slots(player->registrations, positions);
                         CLAY_TEXT(str8_to_clay(str8_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
-                            .fontId = FONT_ID_BODY_16,
-                            .fontSize = 16,
-                            .textColor = stringColor
+                            .fontId = FONT_ID_PRESS_START_2P,
+                            .fontSize = 24,
+                            .textColor = dashAccentTeal
                         }));
                     }
                 }
 
                 idx = player->nxt;
+            }
             }
         }
     }

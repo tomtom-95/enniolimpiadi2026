@@ -34,7 +34,7 @@ main(void)
 
     Font fonts[2];
     fonts[FONT_ID_BODY_16] = LoadFontEx("resources/Roboto-Regular.ttf", 48, 0, 400);
-    fonts[FONT_ID_ORIENTAL_CHICKEN] = LoadFontEx("resources/Comic_Neue_Press_Start_2P/Press_Start_2P/PressStart2P-Regular.ttf", 48, 0, 400);
+    fonts[FONT_ID_PRESS_START_2P] = LoadFontEx("resources/Comic_Neue_Press_Start_2P/Press_Start_2P/PressStart2P-Regular.ttf", 48, 0, 400);
     SetTextureFilter(fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
     Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
