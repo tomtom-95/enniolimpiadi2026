@@ -126,21 +126,34 @@ HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 }
 
 void
-HandleEventRowInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
-{
-    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
-    u8 event_idx = (u8)userData;
-    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
-        data.selectedTournamentIdx = event_idx;
-    }
-}
-
-void
 HandleGoBackInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.selectedTournamentIdx = 0;
+    }
+}
+
+void
+HandleEditTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        u32 tournament_idx = (u32)userData;
+        data.selectedTournamentIdx = tournament_idx;
+    }
+}
+
+void
+HandleDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        u32 tournament_idx = (u32)userData;
+        Entity *tournament = data.tournaments.entities + tournament_idx;
+        entity_list_remove(&data.tournaments, &data.players, tournament->name);
     }
 }
 
@@ -924,8 +937,28 @@ RenderEventElement(Clay_String element)
 }
 
 void
-RenderEventsActionsButtons(void)
+RenderEventsActionsButtons(u32 tournament_idx)
 {
+    // Edit button
+    CLAY_AUTO_ID({
+        .layout = {
+            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+            .padding = { 12, 12, 6, 6 },
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        },
+        .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+        .cornerRadius = CLAY_CORNER_RADIUS(8)
+    }) {
+        Clay_OnHover(HandleEditTournament, (intptr_t)tournament_idx);
+
+        CLAY_TEXT(CLAY_STRING("Edit"), CLAY_TEXT_CONFIG({
+            .fontId = FONT_ID_BODY_16,
+            .fontSize = 14,
+            .textColor = COLOR_WHITE
+        }));
+    }
+
+    // Delete button
     CLAY_AUTO_ID({
         .layout = {
             .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
@@ -935,6 +968,8 @@ RenderEventsActionsButtons(void)
         .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : removeButtonColor,
         .cornerRadius = CLAY_CORNER_RADIUS(8)
     }) {
+        Clay_OnHover(HandleDeleteTournament, (intptr_t)tournament_idx);
+
         CLAY_TEXT(CLAY_STRING("Delete"), CLAY_TEXT_CONFIG({
             .fontId = FONT_ID_BODY_16,
             .fontSize = 14,
@@ -2059,7 +2094,7 @@ RenderEvents(void)
                     }
                     CLAY(CLAY_ID("EventActionsHeader"), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIXED(100) }
+                            .sizing = { .width = CLAY_SIZING_FIXED(150) }
                         }
                     }) {
                         CLAY_TEXT(CLAY_STRING("ACTIONS"), CLAY_TEXT_CONFIG({
@@ -2086,8 +2121,6 @@ RenderEvents(void)
                         },
                         .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
                     }) {
-                        Clay_OnHover(HandleEventRowInteraction, (intptr_t)idx);
-
                         // Event name
                         CLAY(CLAY_IDI("EventName", idx), {
                             .layout = {
@@ -2121,10 +2154,12 @@ RenderEvents(void)
                         // Actions
                         CLAY(CLAY_IDI("EventActions", idx), {
                             .layout = {
-                                .sizing = { .width = CLAY_SIZING_FIXED(100) }
+                                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                                .sizing = { .width = CLAY_SIZING_FIXED(150) },
+                                .childGap = 8
                             }
                         }) {
-                            RenderEventsActionsButtons();
+                            RenderEventsActionsButtons(idx);
                         }
                     }
 
