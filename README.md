@@ -43,7 +43,7 @@ sudo dnf install clang pkg-config raylib-devel
 Clone the repository and run the build script:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/tomtom-95/enniolimpiadi2026.git
 cd enniolimpiadi2026
 ./build.sh enniolimpiadi
 ```
