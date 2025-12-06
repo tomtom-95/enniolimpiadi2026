@@ -934,15 +934,22 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
     intptr_t player1_data = (intptr_t)((bracket_pos1 << 8) | player1_idx);
     intptr_t player2_data = (intptr_t)((bracket_pos2 << 8) | player2_idx);
 
-    // Outer border container
+    // Outer container with accent bar
     CLAY(CLAY_IDI("MatchBorder", match_id), {
         .layout = {
-            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-            .padding = { 2, 2, 2, 2 }
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
         },
-        .backgroundColor = matchBorderColor,
         .cornerRadius = CLAY_CORNER_RADIUS(8)
     }) {
+        // Teal accent bar at top
+        CLAY(CLAY_IDI("MatchAccent", match_id), {
+            .layout = {
+                .sizing = { .width = CLAY_SIZING_FIXED(160), .height = CLAY_SIZING_FIXED(4) }
+            },
+            .backgroundColor = dashAccentTeal,
+            .cornerRadius = { 8, 8, 0, 0 }
+        }) {}
         CLAY(CLAY_IDI("Match", match_id), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -951,16 +958,18 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
                 .childGap = 2,
                 .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
             },
-            .backgroundColor = COLOR_WHITE,
-            .cornerRadius = CLAY_CORNER_RADIUS(6)
+            .backgroundColor = dashCardBg,
+            .cornerRadius = { 0, 0, 8, 8 },
+            .border = { .width = { 1, 1, 1, 1 }, .color = textInputBorderColor }
         }) {
             // Player 1 - clickable to advance
             CLAY(CLAY_IDI("Player1Slot", match_id), {
                 .layout = {
                     .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                    .padding = { 4, 4, 2, 2 },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                 },
-                .backgroundColor = Clay_Hovered() && !player1_is_tbd ? playerRowHoverColor : COLOR_WHITE,
+                .backgroundColor = Clay_Hovered() && !player1_is_tbd ? dashAccentTeal : dashCardBg,
                 .cornerRadius = CLAY_CORNER_RADIUS(4)
             }) {
                 if (!player1_is_tbd) {
@@ -988,20 +997,20 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
                     .layout = {
                         .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(1) }
                     },
-                    .backgroundColor = matchBorderColor
+                    .backgroundColor = dashAccentPurple
                 }) {}
                 // VS text
                 CLAY_TEXT(CLAY_STRING("vs"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 12,
-                    .textColor = matchVsColor
+                    .textColor = dashAccentPurple
                 }));
                 // Right line
                 CLAY_AUTO_ID({
                     .layout = {
                         .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(1) }
                     },
-                    .backgroundColor = matchBorderColor
+                    .backgroundColor = dashAccentPurple
                 }) {}
             }
 
@@ -1009,9 +1018,10 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
             CLAY(CLAY_IDI("Player2Slot", match_id), {
                 .layout = {
                     .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                    .padding = { 4, 4, 2, 2 },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                 },
-                .backgroundColor = Clay_Hovered() && !player2_is_tbd ? playerRowHoverColor : COLOR_WHITE,
+                .backgroundColor = Clay_Hovered() && !player2_is_tbd ? dashAccentTeal : dashCardBg,
                 .cornerRadius = CLAY_CORNER_RADIUS(4)
             }) {
                 if (!player2_is_tbd) {
@@ -1033,12 +1043,19 @@ RenderByeSlot(u32 match_id)
     // Render a bye slot with the same dimensions as a regular match slot
     CLAY(CLAY_IDI("MatchBorder", match_id), {
         .layout = {
-            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-            .padding = { 2, 2, 2, 2 }
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
         },
-        .backgroundColor = matchBorderColor,
         .cornerRadius = CLAY_CORNER_RADIUS(8)
     }) {
+        // Orange accent bar at top (to differentiate from regular matches)
+        CLAY(CLAY_IDI("ByeAccent", match_id), {
+            .layout = {
+                .sizing = { .width = CLAY_SIZING_FIXED(160), .height = CLAY_SIZING_FIXED(4) }
+            },
+            .backgroundColor = dashAccentOrange,
+            .cornerRadius = { 8, 8, 0, 0 }
+        }) {}
         CLAY(CLAY_IDI("Match", match_id), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -1047,17 +1064,18 @@ RenderByeSlot(u32 match_id)
                 .childGap = 2,
                 .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
             },
-            .backgroundColor = COLOR_WHITE,
-            .cornerRadius = CLAY_CORNER_RADIUS(6)
+            .backgroundColor = dashCardBg,
+            .cornerRadius = { 0, 0, 8, 8 },
+            .border = { .width = { 1, 1, 1, 1 }, .color = textInputBorderColor }
         }) {
             // Empty slot 1 - fixed height container to match player name height
             CLAY_AUTO_ID({
                 .layout = {
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SLOT_PLAYER_FONT_SIZE) }
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SLOT_PLAYER_FONT_SIZE + 4) }
                 }
             }) {}
 
-            // VS separator with lines (same as RenderMatchSlot)
+            // BYE separator with lines
             CLAY_AUTO_ID({
                 .layout = {
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
@@ -1072,27 +1090,27 @@ RenderByeSlot(u32 match_id)
                     .layout = {
                         .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(1) }
                     },
-                    .backgroundColor = matchBorderColor
+                    .backgroundColor = dashAccentOrange
                 }) {}
-                // BYE text instead of VS
+                // BYE text
                 CLAY_TEXT(CLAY_STRING("BYE"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 12,
-                    .textColor = matchVsColor
+                    .textColor = dashAccentOrange
                 }));
                 // Right line
                 CLAY_AUTO_ID({
                     .layout = {
                         .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(1) }
                     },
-                    .backgroundColor = matchBorderColor
+                    .backgroundColor = dashAccentOrange
                 }) {}
             }
 
             // Empty slot 2 - fixed height container to match player name height
             CLAY_AUTO_ID({
                 .layout = {
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SLOT_PLAYER_FONT_SIZE) }
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SLOT_PLAYER_FONT_SIZE + 4) }
                 }
             }) {}
         }
@@ -1244,8 +1262,7 @@ RenderTournamentChart(u32 tournament_idx)
                 .y = CLAY_ALIGN_Y_TOP
             },
         },
-        .backgroundColor = dashBgGradientTop,
-        .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+        .backgroundColor = dashBgGradientTop
     }) {
         // Go back button row
         CLAY(CLAY_ID("GoBackRow"), {
@@ -1323,7 +1340,8 @@ RenderTournamentChart(u32 tournament_idx)
                         .childGap = 12
                     },
                     .backgroundColor = dashCardBg,
-                    .cornerRadius = { 0, 0, 12, 12 }
+                    .cornerRadius = { 0, 0, 12, 12 },
+                    .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
                 }) {
                 Entity *panel_tournament = data.tournaments.entities + tournament_idx;
                 s32 registered_positions[64] = {0};
@@ -1554,7 +1572,8 @@ RenderTournamentChart(u32 tournament_idx)
                         .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_TOP }
                     },
                     .backgroundColor = dashCardBg,
-                    .cornerRadius = { 0, 0, 12, 12 }
+                    .cornerRadius = { 0, 0, 12, 12 },
+                    .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
                 }) {
                 Entity *tournament = data.tournaments.entities + tournament_idx;
 
@@ -2144,7 +2163,7 @@ RenderPlayers(void)
                             .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
                         }
                     }) {
-                        CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 18,
                             .textColor = dashAccentPurple
@@ -2256,4 +2275,128 @@ CreateLayout(void)
         Clay_RenderCommandArray_Get(&renderCommands, i)->boundingBox.y += data.yOffset;
     }
     return renderCommands;
+}
+
+void
+DrawBracketConnections(void)
+{
+    // Only draw connections on Events page when viewing a tournament
+    if (data.selectedHeaderButton != PAGE_Events)
+        return;
+
+    // Check if a tournament is selected (0 means no selection)
+    if (data.selectedTournamentIdx == 0)
+        return;
+
+    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+
+    // Only for single elimination format
+    if (tournament->format != FORMAT_SINGLE_ELIMINATION)
+        return;
+
+    // Get number of registered players
+    s32 positions[64] = {0};
+    u32 num_players = find_all_filled_slots(tournament->registrations, positions);
+
+    if (num_players < 2)
+        return;
+
+    // Calculate bracket size (next power of 2 >= num_players)
+    u32 bracket_size = 1;
+    while (bracket_size < num_players)
+        bracket_size <<= 1;
+
+    // Calculate number of rounds
+    u32 num_rounds = 0;
+    u32 temp = bracket_size;
+    while (temp > 1) {
+        temp >>= 1;
+        num_rounds++;
+    }
+
+    // Get the TournamentChart bounding box for clipping
+    Clay_ElementData chartData = Clay_GetElementData(
+        Clay_GetElementId(CLAY_STRING("TournamentChart")));
+
+    if (!chartData.found)
+        return;
+
+    Clay_BoundingBox chartBox = chartData.boundingBox;
+    chartBox.y += data.yOffset;
+
+    // Enable scissor mode to clip curves to the chart area
+    BeginScissorMode(
+        (int)chartBox.x,
+        (int)chartBox.y,
+        (int)chartBox.width,
+        (int)chartBox.height
+    );
+
+    // Line color and thickness (Teal to match theme)
+    Color lineColor = { 72, 219, 195, 255 };
+    float thickness = 2.0f;
+
+    // Draw connections for each round after the first
+    for (u32 round = 1; round < num_rounds; round++)
+    {
+        u32 matches_in_round = bracket_size >> (round + 1);
+
+        for (u32 match = 0; match < matches_in_round; match++)
+        {
+            u32 current_match_id = round * 100 + match;
+            u32 feeder1_match_id = (round - 1) * 100 + (match * 2);
+            u32 feeder2_match_id = (round - 1) * 100 + (match * 2 + 1);
+
+            // Get bounding boxes
+            Clay_ElementData current_data = Clay_GetElementData(
+                Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), current_match_id));
+            Clay_ElementData feeder1_data = Clay_GetElementData(
+                Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder1_match_id));
+            Clay_ElementData feeder2_data = Clay_GetElementData(
+                Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder2_match_id));
+
+            if (!current_data.found || !feeder1_data.found || !feeder2_data.found)
+                continue;
+
+            Clay_BoundingBox current_box = current_data.boundingBox;
+            Clay_BoundingBox feeder1_box = feeder1_data.boundingBox;
+            Clay_BoundingBox feeder2_box = feeder2_data.boundingBox;
+
+            // Apply global y offset
+            current_box.y += data.yOffset;
+            feeder1_box.y += data.yOffset;
+            feeder2_box.y += data.yOffset;
+
+            // Start points (right edge, vertical center of feeder matches)
+            Vector2 start1 = {
+                feeder1_box.x + feeder1_box.width,
+                feeder1_box.y + feeder1_box.height / 2.0f
+            };
+            Vector2 start2 = {
+                feeder2_box.x + feeder2_box.width,
+                feeder2_box.y + feeder2_box.height / 2.0f
+            };
+
+            // End point (left edge, vertical center of current match)
+            Vector2 end = {
+                current_box.x,
+                current_box.y + current_box.height / 2.0f
+            };
+
+            // Control points for smooth S-shaped bezier curves
+            float midX = (start1.x + end.x) / 2.0f;
+
+            Vector2 ctrl1_1 = { midX, start1.y };
+            Vector2 ctrl1_2 = { midX, end.y };
+
+            Vector2 ctrl2_1 = { midX, start2.y };
+            Vector2 ctrl2_2 = { midX, end.y };
+
+            // Draw bezier curves
+            DrawSplineSegmentBezierCubic(start1, ctrl1_1, ctrl1_2, end, thickness, lineColor);
+            DrawSplineSegmentBezierCubic(start2, ctrl2_1, ctrl2_2, end, thickness, lineColor);
+        }
+    }
+
+    EndScissorMode();
 }

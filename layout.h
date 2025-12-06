@@ -113,7 +113,11 @@ typedef struct {
 // void RenderEvents(void);
 // void RenderPlayers(void);
 // void RenderResults(void);
-// 
+//
 // Clay_RenderCommandArray CreateLayout(void);
+
+// Draws bezier curves connecting match slots in single elimination brackets
+// Call this after CreateLayout() and Clay_Raylib_Render(), between BeginDrawing/EndDrawing
+void DrawBracketConnections(void);
 
 #endif // LAYOUT_H

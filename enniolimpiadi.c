@@ -143,6 +143,9 @@ main(void)
         ClearBackground(BLACK);
         Clay_Raylib_Render(renderCommands, fonts);
 
+        // Draw bezier curves connecting bracket match slots
+        DrawBracketConnections();
+
         // Render text input cursor (after Clay, so it doesn't interfere with scrolling)
         if (data.focusedTextbox != TEXTBOX_NULL)
         {
