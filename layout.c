@@ -1238,47 +1238,55 @@ RenderTournamentChart(u32 tournament_idx)
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .sizing = layoutExpand,
-            .childGap = 16,
+            .childGap = 20,
+            .padding = { 8, 8, 8, 8 },
             .childAlignment = {
                 .y = CLAY_ALIGN_Y_TOP
             },
         },
-        .backgroundColor = COLOR_OFF_WHITE
+        .backgroundColor = dashBgGradientTop,
+        .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
     }) {
-        // Header with go back and tournament name
-        CLAY(CLAY_ID("TournamentHeader"), {
+        // Go back button row
+        CLAY(CLAY_ID("GoBackRow"), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                .padding = { 12, 12, 8, 8 },
-                .childGap = 16,
-                .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
-            },
-            .backgroundColor = COLOR_WHITE,
-            .cornerRadius = CLAY_CORNER_RADIUS(6)
+                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)}
+            }
         }) {
             CLAY(CLAY_ID("GoBack"), {
                 .layout = {
-                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
                     .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
-                    .padding = { 10, 10, 6, 6 },
+                    .padding = { 12, 12, 8, 8 },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                 },
-                .backgroundColor = Clay_Hovered() ? goBackButtonHoverColor : goBackButtonColor,
-                .cornerRadius = CLAY_CORNER_RADIUS(4),
-                .border = { .width = {1, 1, 1, 1}, .color = goBackTextColor }
+                .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+                .cornerRadius = CLAY_CORNER_RADIUS(10)
             }) {
                 Clay_OnHover(HandleGoBackInteraction, 0);
                 CLAY_TEXT(CLAY_STRING("< Go back"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 14,
-                    .textColor = goBackTextColor
+                    .textColor = COLOR_WHITE
                 }));
             }
+        }
+
+        // Tournament name banner
+        CLAY(CLAY_ID("TournamentBanner"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                .padding = { 24, 24, 20, 20 },
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = dashAccentOrange,
+            .cornerRadius = CLAY_CORNER_RADIUS(16)
+        }) {
             CLAY_TEXT(str8_to_clay((data.tournaments.entities + tournament_idx)->name), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 24,
-                .textColor = tournamentTitleColor
+                .fontId = FONT_ID_PRESS_START_2P,
+                .fontSize = 28,
+                .textColor = COLOR_WHITE
             }));
         }
 
@@ -1290,17 +1298,33 @@ RenderTournamentChart(u32 tournament_idx)
                 .childGap = 16
             }
         }) {
-            // Left panel - Player management
-            CLAY(CLAY_ID("LeftPanel"), {
+            // Left panel outer - with accent bar
+            CLAY(CLAY_ID("LeftPanelOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = {.width = CLAY_SIZING_FIXED(200), .height = CLAY_SIZING_GROW(0)},
-                    .padding = { 12, 12, 12, 12 },
-                    .childGap = 12
+                    .sizing = {.width = CLAY_SIZING_FIXED(220), .height = CLAY_SIZING_GROW(0)}
                 },
-                .backgroundColor = COLOR_WHITE,
-                .cornerRadius = CLAY_CORNER_RADIUS(6)
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
+                // Teal accent bar
+                CLAY(CLAY_ID("LeftPanelAccent"), {
+                    .layout = {
+                        .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                    },
+                    .backgroundColor = dashAccentTeal,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
+                // Left panel content
+                CLAY(CLAY_ID("LeftPanel"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
+                        .padding = { 16, 16, 16, 16 },
+                        .childGap = 12
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = { 0, 0, 12, 12 }
+                }) {
                 Entity *panel_tournament = data.tournaments.entities + tournament_idx;
                 s32 registered_positions[64] = {0};
                 u32 registered_count = find_all_filled_slots(panel_tournament->registrations, registered_positions);
@@ -1318,15 +1342,14 @@ RenderTournamentChart(u32 tournament_idx)
                             .padding = { 10, 10, 8, 8 },
                             .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                         },
-                        .backgroundColor = Clay_Hovered() ? goBackButtonHoverColor : goBackButtonColor,
-                        .cornerRadius = CLAY_CORNER_RADIUS(4),
-                        .border = { .width = {1, 1, 1, 1}, .color = goBackTextColor }
+                        .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+                        .cornerRadius = CLAY_CORNER_RADIUS(8)
                     }) {
                         Clay_OnHover(HandleToggleTournamentFormat, 0);
                         CLAY_TEXT(format_text, CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 14,
-                            .textColor = goBackTextColor
+                            .textColor = COLOR_WHITE
                         }));
                     }
 
@@ -1339,14 +1362,14 @@ RenderTournamentChart(u32 tournament_idx)
                                 .padding = { 10, 10, 8, 8 },
                                 .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                             },
-                            .backgroundColor = Clay_Hovered() ? addButtonHoverColor : addButtonColor,
-                            .cornerRadius = CLAY_CORNER_RADIUS(4)
+                            .backgroundColor = Clay_Hovered() ? dashAccentTeal : dashAccentCoral,
+                            .cornerRadius = CLAY_CORNER_RADIUS(8)
                         }) {
                             Clay_OnHover(HandleStartTournament, 0);
                             CLAY_TEXT(CLAY_STRING("Start Tournament"), CLAY_TEXT_CONFIG({
                                 .fontId = FONT_ID_BODY_16,
                                 .fontSize = 14,
-                                .textColor = addButtonTextColor
+                                .textColor = COLOR_WHITE
                             }));
                         }
                     }
@@ -1358,7 +1381,6 @@ RenderTournamentChart(u32 tournament_idx)
                             .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
                             .childGap = 4
                         },
-                        .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
                     }) {
                         for (u32 i = 0; i < registered_count; i++)
                         {
@@ -1407,7 +1429,6 @@ RenderTournamentChart(u32 tournament_idx)
                             .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
                             .childGap = 4
                         },
-                        .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
                     }) {
                         u32 not_registered_count = 0;
                         u32 idx_tail = data.players.len + 1;
@@ -1455,7 +1476,7 @@ RenderTournamentChart(u32 tournament_idx)
                     CLAY_TEXT(CLAY_STRING("Tournament In Progress"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 16,
-                        .textColor = addButtonColor
+                        .textColor = dashAccentTeal
                     }));
 
                     // Return to Registration button
@@ -1465,14 +1486,14 @@ RenderTournamentChart(u32 tournament_idx)
                             .padding = { 10, 10, 8, 8 },
                             .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                         },
-                        .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : removeButtonColor,
-                        .cornerRadius = CLAY_CORNER_RADIUS(4)
+                        .backgroundColor = Clay_Hovered() ? dashAccentCoral : dashAccentPurple,
+                        .cornerRadius = CLAY_CORNER_RADIUS(8)
                     }) {
                         Clay_OnHover(HandleReturnToRegistration, 0);
                         CLAY_TEXT(CLAY_STRING("Return to Registration"), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 14,
-                            .textColor = removeTextColor
+                            .textColor = COLOR_WHITE
                         }));
                     }
 
@@ -1507,17 +1528,34 @@ RenderTournamentChart(u32 tournament_idx)
                         }));
                     }
                 }
+                }
             }
 
-            // Right panel - Tournament chart
-            CLAY(CLAY_ID("TournamentChart"), {
+            // Right panel outer - with accent bar
+            CLAY(CLAY_ID("TournamentChartOuter"), {
                 .layout = {
-                    .sizing = layoutExpand,
-                    .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_TOP }
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = layoutExpand
                 },
-                .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() },
-                .backgroundColor = COLOR_OFF_WHITE
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
+                // Purple accent bar
+                CLAY(CLAY_ID("TournamentChartAccent"), {
+                    .layout = {
+                        .sizing = {.height = CLAY_SIZING_FIXED(6), .width = CLAY_SIZING_GROW(0)}
+                    },
+                    .backgroundColor = dashAccentPurple,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
+                // Right panel - Tournament chart
+                CLAY(CLAY_ID("TournamentChart"), {
+                    .layout = {
+                        .sizing = layoutExpand,
+                        .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_TOP }
+                    },
+                    .backgroundColor = dashCardBg,
+                    .cornerRadius = { 0, 0, 12, 12 }
+                }) {
                 Entity *tournament = data.tournaments.entities + tournament_idx;
 
                 // Get the number of players in the tournament
@@ -1693,6 +1731,7 @@ RenderTournamentChart(u32 tournament_idx)
                             }
                         }
                     }
+                }
                 }
             }
         }
