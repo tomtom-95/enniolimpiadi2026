@@ -80,6 +80,9 @@ struct ClayVideoDemo_Data {
 
     // Mouse cursor (set once per frame to avoid flickering)
     int mouseCursor;
+
+    // Zoom state for tournament chart
+    float chartZoomLevel;
 };
 
 typedef struct {

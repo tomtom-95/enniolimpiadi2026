@@ -117,6 +117,7 @@ main(void)
     data.fonts = fonts;
     data.players = players;
     data.tournaments = tournaments;
+    data.chartZoomLevel = 1.0f;
 
     while (!WindowShouldClose())
     {

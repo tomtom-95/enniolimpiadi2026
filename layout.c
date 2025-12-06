@@ -153,6 +153,29 @@ HandleOuterContainerInteraction(Clay_ElementId elementId, Clay_PointerData point
 }
 
 void
+HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    // Handle zoom with Cmd+/Cmd- while hovering over chart
+    bool cmdPressed = IsKeyDown(KEY_LEFT_SUPER) || IsKeyDown(KEY_RIGHT_SUPER);
+
+    if (cmdPressed)
+    {
+        if (IsKeyPressed(KEY_RIGHT_BRACKET)) // Which is actually the "+" on the Mac with italian keyboard layout
+        {
+            // Zoom in (Cmd +)
+            data.chartZoomLevel += 0.1f;
+            if (data.chartZoomLevel > 3.0f) data.chartZoomLevel = 3.0f;
+        }
+        if (IsKeyPressed(KEY_SLASH)) // Which is actually the "-" on the Mac with italian keyboard layout
+        {
+            // Zoom out (Cmd -)
+            data.chartZoomLevel -= 0.1f;
+            if (data.chartZoomLevel < 0.5f) data.chartZoomLevel = 0.5f;
+        }
+    }
+}
+
+void
 HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     data.mouseCursor = MOUSE_CURSOR_IBEAM;
@@ -923,7 +946,7 @@ RenderEventsActionsButtons(void)
 void
 RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
     u8 player1_idx, u8 player2_idx,
-    u32 bracket_pos1, u32 bracket_pos2, u32 match_id)
+    u32 bracket_pos1, u32 bracket_pos2, u32 match_id, float zoom)
 {
     bool player1_is_tbd = (player1_idx == 0);
     bool player2_is_tbd = (player2_idx == 0);
@@ -934,50 +957,58 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
     intptr_t player1_data = (intptr_t)((bracket_pos1 << 8) | player1_idx);
     intptr_t player2_data = (intptr_t)((bracket_pos2 << 8) | player2_idx);
 
+    float slotWidth = 160 * zoom;
+    float accentHeight = 4 * zoom;
+    float cornerRadius = 8 * zoom;
+    u16 paddingH = (u16)(12 * zoom);
+    u16 paddingV = (u16)(10 * zoom);
+    float fontSize = SLOT_PLAYER_FONT_SIZE * zoom;
+    float vsFontSize = 12 * zoom;
+
     // Outer container with accent bar
     CLAY(CLAY_IDI("MatchBorder", match_id), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
         },
-        .cornerRadius = CLAY_CORNER_RADIUS(8)
+        .cornerRadius = CLAY_CORNER_RADIUS(cornerRadius)
     }) {
         // Teal accent bar at top
         CLAY(CLAY_IDI("MatchAccent", match_id), {
             .layout = {
-                .sizing = { .width = CLAY_SIZING_FIXED(160), .height = CLAY_SIZING_FIXED(4) }
+                .sizing = { .width = CLAY_SIZING_FIXED(slotWidth), .height = CLAY_SIZING_FIXED(accentHeight) }
             },
             .backgroundColor = dashAccentTeal,
-            .cornerRadius = { 8, 8, 0, 0 }
+            .cornerRadius = { cornerRadius, cornerRadius, 0, 0 }
         }) {}
         CLAY(CLAY_IDI("Match", match_id), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = { .width = CLAY_SIZING_FIXED(160), .height = CLAY_SIZING_FIT(0) },
-                .padding = { 12, 12, 10, 10 },
-                .childGap = 2,
+                .sizing = { .width = CLAY_SIZING_FIXED(slotWidth), .height = CLAY_SIZING_FIT(0) },
+                .padding = { paddingH, paddingH, paddingV, paddingV },
+                .childGap = (u16)(2 * zoom),
                 .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
             },
             .backgroundColor = dashCardBg,
-            .cornerRadius = { 0, 0, 8, 8 },
+            .cornerRadius = { 0, 0, cornerRadius, cornerRadius },
             .border = { .width = { 1, 1, 1, 1 }, .color = textInputBorderColor }
         }) {
             // Player 1 - clickable to advance
             CLAY(CLAY_IDI("Player1Slot", match_id), {
                 .layout = {
                     .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                    .padding = { 4, 4, 2, 2 },
+                    .padding = { (u16)(4 * zoom), (u16)(4 * zoom), (u16)(2 * zoom), (u16)(2 * zoom) },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                 },
                 .backgroundColor = Clay_Hovered() && !player1_is_tbd ? dashAccentTeal : dashCardBg,
-                .cornerRadius = CLAY_CORNER_RADIUS(4)
+                .cornerRadius = CLAY_CORNER_RADIUS(4 * zoom)
             }) {
                 if (!player1_is_tbd) {
                     Clay_OnHover(HandleAdvanceWinner, player1_data);
                 }
                 CLAY_TEXT(player1_name, CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
-                    .fontSize = SLOT_PLAYER_FONT_SIZE,
+                    .fontSize = fontSize,
                     .textColor = name1Color
                 }));
             }
@@ -987,8 +1018,8 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
                 .layout = {
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
                     .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                    .padding = { 0, 0, 4, 4 },
-                    .childGap = 8,
+                    .padding = { 0, 0, (u16)(4 * zoom), (u16)(4 * zoom) },
+                    .childGap = (u16)(8 * zoom),
                     .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
                 }
             }) {
@@ -1002,7 +1033,7 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
                 // VS text
                 CLAY_TEXT(CLAY_STRING("vs"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
-                    .fontSize = 12,
+                    .fontSize = vsFontSize,
                     .textColor = dashAccentPurple
                 }));
                 // Right line
@@ -1018,18 +1049,18 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
             CLAY(CLAY_IDI("Player2Slot", match_id), {
                 .layout = {
                     .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                    .padding = { 4, 4, 2, 2 },
+                    .padding = { (u16)(4 * zoom), (u16)(4 * zoom), (u16)(2 * zoom), (u16)(2 * zoom) },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                 },
                 .backgroundColor = Clay_Hovered() && !player2_is_tbd ? dashAccentTeal : dashCardBg,
-                .cornerRadius = CLAY_CORNER_RADIUS(4)
+                .cornerRadius = CLAY_CORNER_RADIUS(4 * zoom)
             }) {
                 if (!player2_is_tbd) {
                     Clay_OnHover(HandleAdvanceWinner, player2_data);
                 }
                 CLAY_TEXT(player2_name, CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
-                    .fontSize = SLOT_PLAYER_FONT_SIZE,
+                    .fontSize = fontSize,
                     .textColor = name2Color
                 }));
             }
@@ -1038,40 +1069,48 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
 }
 
 void
-RenderByeSlot(u32 match_id)
+RenderByeSlot(u32 match_id, float zoom)
 {
+    float slotWidth = 160 * zoom;
+    float accentHeight = 4 * zoom;
+    float cornerRadius = 8 * zoom;
+    u16 paddingH = (u16)(12 * zoom);
+    u16 paddingV = (u16)(10 * zoom);
+    float fontSize = SLOT_PLAYER_FONT_SIZE * zoom;
+    float byeFontSize = 12 * zoom;
+
     // Render a bye slot with the same dimensions as a regular match slot
     CLAY(CLAY_IDI("MatchBorder", match_id), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
         },
-        .cornerRadius = CLAY_CORNER_RADIUS(8)
+        .cornerRadius = CLAY_CORNER_RADIUS(cornerRadius)
     }) {
         // Orange accent bar at top (to differentiate from regular matches)
         CLAY(CLAY_IDI("ByeAccent", match_id), {
             .layout = {
-                .sizing = { .width = CLAY_SIZING_FIXED(160), .height = CLAY_SIZING_FIXED(4) }
+                .sizing = { .width = CLAY_SIZING_FIXED(slotWidth), .height = CLAY_SIZING_FIXED(accentHeight) }
             },
             .backgroundColor = dashAccentOrange,
-            .cornerRadius = { 8, 8, 0, 0 }
+            .cornerRadius = { cornerRadius, cornerRadius, 0, 0 }
         }) {}
         CLAY(CLAY_IDI("Match", match_id), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = { .width = CLAY_SIZING_FIXED(160), .height = CLAY_SIZING_FIT(0) },
-                .padding = { 12, 12, 10, 10 },
-                .childGap = 2,
+                .sizing = { .width = CLAY_SIZING_FIXED(slotWidth), .height = CLAY_SIZING_FIT(0) },
+                .padding = { paddingH, paddingH, paddingV, paddingV },
+                .childGap = (u16)(2 * zoom),
                 .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
             },
             .backgroundColor = dashCardBg,
-            .cornerRadius = { 0, 0, 8, 8 },
+            .cornerRadius = { 0, 0, cornerRadius, cornerRadius },
             .border = { .width = { 1, 1, 1, 1 }, .color = textInputBorderColor }
         }) {
             // Empty slot 1 - fixed height container to match player name height
             CLAY_AUTO_ID({
                 .layout = {
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SLOT_PLAYER_FONT_SIZE + 4) }
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(fontSize + 4 * zoom) }
                 }
             }) {}
 
@@ -1080,8 +1119,8 @@ RenderByeSlot(u32 match_id)
                 .layout = {
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
                     .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                    .padding = { 0, 0, 4, 4 },
-                    .childGap = 8,
+                    .padding = { 0, 0, (u16)(4 * zoom), (u16)(4 * zoom) },
+                    .childGap = (u16)(8 * zoom),
                     .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
                 }
             }) {
@@ -1095,7 +1134,7 @@ RenderByeSlot(u32 match_id)
                 // BYE text
                 CLAY_TEXT(CLAY_STRING("BYE"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
-                    .fontSize = 12,
+                    .fontSize = byeFontSize,
                     .textColor = dashAccentOrange
                 }));
                 // Right line
@@ -1110,7 +1149,7 @@ RenderByeSlot(u32 match_id)
             // Empty slot 2 - fixed height container to match player name height
             CLAY_AUTO_ID({
                 .layout = {
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SLOT_PLAYER_FONT_SIZE + 4) }
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(fontSize + 4 * zoom) }
                 }
             }) {}
         }
@@ -1575,6 +1614,7 @@ RenderTournamentChart(u32 tournament_idx)
                     .cornerRadius = { 0, 0, 12, 12 },
                     .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
                 }) {
+                Clay_OnHover(HandleChartHover, 0);
                 Entity *tournament = data.tournaments.entities + tournament_idx;
 
                 // Get the number of players in the tournament
@@ -1615,11 +1655,12 @@ RenderTournamentChart(u32 tournament_idx)
                     }
 
                     // Create horizontal layout for rounds (left to right)
+                    float zoom = data.chartZoomLevel;
                     CLAY(CLAY_ID("RoundsContainer"), {
                         .layout = {
                             .layoutDirection = CLAY_LEFT_TO_RIGHT,
                             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-                            .childGap = 32,
+                            .childGap = (u16)(32 * zoom),
                             .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                         },
                     }) {
@@ -1663,7 +1704,7 @@ RenderTournamentChart(u32 tournament_idx)
                                         // BYE slots only exist in the first round
                                         if (round == 0 && player1_idx == 0 && player2_idx == 0)
                                         {
-                                            RenderByeSlot(match_id);
+                                            RenderByeSlot(match_id, zoom);
                                         }
                                         else
                                         {
@@ -1682,7 +1723,7 @@ RenderTournamentChart(u32 tournament_idx)
                                                 name2 = str8_to_clay_truncated(data.frameArena, player2->name, MAX_DISPLAY_NAME_LEN);
                                             }
 
-                                            RenderMatchSlot(name1, name2, player1_idx, player2_idx, pos1, pos2, match_id);
+                                            RenderMatchSlot(name1, name2, player1_idx, player2_idx, pos1, pos2, match_id, zoom);
                                         }
                                     }
                                 }
