@@ -1446,15 +1446,6 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament, s32 *registered_
                 }));
             }
         }
-
-        if (registered_count == 0)
-        {
-            CLAY_TEXT(CLAY_STRING("No players registered"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 16,
-                .textColor = matchVsColor
-            }));
-        }
     }
 
     // List of not registered players (click to register)
@@ -1898,15 +1889,7 @@ RenderTournamentChart(u32 tournament_idx)
                     s32 _positions[64] = {0};
                     u32 num_players = find_all_filled_slots(tournament->registrations, _positions);
 
-                    if (num_players == 0)
-                    {
-                        CLAY_TEXT(CLAY_STRING("No players registered yet"), CLAY_TEXT_CONFIG({
-                            .fontId = FONT_ID_BODY_16,
-                            .fontSize = 18,
-                            .textColor = matchVsColor
-                        }));
-                    }
-                    else if (tournament->format == FORMAT_SINGLE_ELIMINATION)
+                    if (tournament->format == FORMAT_SINGLE_ELIMINATION)
                     {
                         RenderSingleEliminationBracket(tournament, num_players);
                     }
