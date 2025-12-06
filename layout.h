@@ -83,6 +83,9 @@ struct ClayVideoDemo_Data {
 
     // Zoom state for tournament chart
     float chartZoomLevel;
+
+    // Confirmation dialog for returning to registration
+    bool showReturnToRegistrationConfirm;
 };
 
 typedef struct {
@@ -107,8 +110,6 @@ typedef struct {
 // // Layout functions
 // void RenderHeaderButton(Clay_String text, Page page);
 // void RenderDashboard(void);
-// void RenderEventsHeaderElement(Clay_String string);
-// void RenderEventElement(Clay_String element);
 // void RenderEventsActionsButtons(void);
 // void RenderMatchSlot(Clay_String player1_name, Clay_String player2_name, bool player1_is_tbd, bool player2_is_tbd, u32 match_id);
 // void RenderByeSlot(u32 match_id);
@@ -121,6 +122,6 @@ typedef struct {
 
 // Draws bezier curves connecting match slots in single elimination brackets
 // Call this after CreateLayout() and Clay_Raylib_Render(), between BeginDrawing/EndDrawing
-void DrawBracketConnections(void);
+// void DrawBracketConnections(void);
 
 #endif // LAYOUT_H

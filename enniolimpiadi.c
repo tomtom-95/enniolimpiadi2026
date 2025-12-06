@@ -132,8 +132,17 @@ main(void)
         Vector2 mousePosition = GetMousePosition();
         Vector2 scrollDelta = GetMouseWheelMoveV();
 
-        Clay_SetPointerState((Clay_Vector2) { mousePosition.x, mousePosition.y }, IsMouseButtonDown(0));
-        Clay_UpdateScrollContainers(true, (Clay_Vector2) { scrollDelta.x, scrollDelta.y }, GetFrameTime());
+        // Block Clay input when confirmation modal is showing
+        if (data.showReturnToRegistrationConfirm)
+        {
+            // Send pointer to off-screen position so no Clay elements receive hover/click
+            Clay_SetPointerState((Clay_Vector2) { -1, -1 }, false);
+        }
+        else
+        {
+            Clay_SetPointerState((Clay_Vector2) { mousePosition.x, mousePosition.y }, IsMouseButtonDown(0));
+            Clay_UpdateScrollContainers(true, (Clay_Vector2) { scrollDelta.x, scrollDelta.y }, GetFrameTime());
+        }
 
         Clay_RenderCommandArray renderCommands = CreateLayout();
 
@@ -145,7 +154,20 @@ main(void)
         Clay_Raylib_Render(renderCommands, fonts);
 
         // Draw bezier curves connecting bracket match slots
-        DrawBracketConnections();
+        if (data.selectedHeaderButton == PAGE_Events &&
+            data.selectedTournamentIdx != 0)
+        {
+            Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+            if (tournament->format == FORMAT_SINGLE_ELIMINATION)
+            {
+                s32 positions[64] = {0};
+                u32 num_players = find_all_filled_slots(tournament->registrations, positions);
+                DrawBracketConnections(num_players);
+            }
+        }
+
+        // Draw confirmation modal overlay (after curves, so it appears on top)
+        DrawConfirmationModal(GetScreenWidth(), GetScreenHeight());
 
         // Render text input cursor (after Clay, so it doesn't interfere with scrolling)
         if (data.focusedTextbox != TEXTBOX_NULL)
