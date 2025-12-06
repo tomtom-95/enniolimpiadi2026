@@ -98,13 +98,26 @@ str8_to_clay(String8 str)
     };
 }
 
+#define MAX_DISPLAY_NAME_LEN 14
+
+Clay_String
+str8_to_clay_truncated(Arena *arena, String8 str, u64 max_len)
+{
+    if (str.len <= max_len) {
+        return str8_to_clay(str);
+    }
+    String8 truncated = str8_cat(arena, str8(str.str, max_len - 3), str8_lit("..."));
+    return str8_to_clay(truncated);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Event Handlers
 
 void
 HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    // SetMouseCursor(data.mouseCursor);
     Page page = (Page)userData;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -115,7 +128,7 @@ HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 void
 HandleEventRowInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     u8 event_idx = (u8)userData;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.selectedTournamentIdx = event_idx;
@@ -125,7 +138,7 @@ HandleEventRowInteraction(Clay_ElementId elementId, Clay_PointerData pointerData
 void
 HandleGoBackInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.selectedTournamentIdx = 0;
     }
@@ -142,7 +155,7 @@ HandleOuterContainerInteraction(Clay_ElementId elementId, Clay_PointerData point
 void
 HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_IBEAM);
+    data.mouseCursor = MOUSE_CURSOR_IBEAM;
 
     TextBoxEnum textBoxEnum = (TextBoxEnum)userData;
 
@@ -201,6 +214,7 @@ HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t
 void
 HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         TextInput *textInput = &data.textInputs[TEXTBOX_Events];
@@ -214,6 +228,7 @@ HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData point
 void
 HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         TextInput *textInput = &data.textInputs[TEXTBOX_Players];
@@ -227,7 +242,7 @@ HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData poin
 void
 HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         u32 player_idx = (u32)userData;
@@ -251,7 +266,7 @@ HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointe
 void
 HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
 
     // Decode userData: lower 8 bits = player_idx, upper bits = bracket_pos
     u8 player_idx = (u8)(userData & 0xFF);
@@ -290,7 +305,7 @@ HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, intp
 void
 HandleStartTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
@@ -308,7 +323,7 @@ HandleStartTournament(Clay_ElementId elementId, Clay_PointerData pointerData, in
 void
 HandleReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
@@ -319,7 +334,7 @@ HandleReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerDat
 void
 HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
-    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
@@ -555,7 +570,7 @@ RenderDashboard(void)
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                 .padding = { 24, 24, 20, 20 },
-                .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
             },
             .backgroundColor = dashAccentPurple,
             .cornerRadius = CLAY_CORNER_RADIUS(16)
@@ -579,7 +594,7 @@ RenderDashboard(void)
             CLAY(CLAY_ID("EventsCardOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)}
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
                 },
                 .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
@@ -623,7 +638,7 @@ RenderDashboard(void)
             CLAY(CLAY_ID("PlayersCardOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)}
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
                 },
                 .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
@@ -665,7 +680,7 @@ RenderDashboard(void)
             CLAY(CLAY_ID("FinishedCardOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)}
+                    .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
                 },
                 .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
@@ -715,7 +730,7 @@ RenderDashboard(void)
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
                     .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                     .padding = { 16, 16, 12, 12 },
-                    .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                 },
                 .backgroundColor = dashAccentOrange,
                 .cornerRadius = CLAY_CORNER_RADIUS(10)
@@ -739,7 +754,7 @@ RenderDashboard(void)
                 CLAY(CLAY_ID("GoldMedal"), {
                     .layout = {
                         .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)},
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                         .padding = { 16, 16, 20, 20 },
                         .childGap = 8,
                         .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
@@ -769,7 +784,7 @@ RenderDashboard(void)
                 CLAY(CLAY_ID("SilverMedal"), {
                     .layout = {
                         .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)},
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                         .padding = { 16, 16, 20, 20 },
                         .childGap = 8,
                         .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
@@ -799,7 +814,7 @@ RenderDashboard(void)
                 CLAY(CLAY_ID("BronzeMedal"), {
                     .layout = {
                         .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(1)},
+                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                         .padding = { 16, 16, 20, 20 },
                         .childGap = 8,
                         .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
@@ -1092,7 +1107,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
     CLAY(CLAY_IDI("GroupMatrix", group_idx), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) }
+            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
         }
     }) {
         // Header row with player names as columns
@@ -1123,14 +1138,14 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                     u32 header_id = group_idx * MAX_GROUP_SIZE * 2 + col;
                     CLAY(CLAY_IDI("MatrixColHeader", header_id), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                            .sizing = { .width = CLAY_SIZING_FIXED(80), .height = CLAY_SIZING_FIT(0) },
                             .padding = { 4, 4, 4, 4 },
                             .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                         },
                         .backgroundColor = COLOR_OFF_WHITE,
                         .border = {.width = {1, 0, 0, 0}, .color = matrixBorderColor }
                     }) {
-                        CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 14,
                             .textColor = stringColor
@@ -1165,7 +1180,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                         },
                         .backgroundColor = COLOR_OFF_WHITE,
                     }) {
-                        CLAY_TEXT(str8_to_clay(row_player->name), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(str8_to_clay_truncated(data.frameArena, row_player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 14,
                             .textColor = stringColor
@@ -1183,7 +1198,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
 
                             CLAY(CLAY_IDI("MatrixCell", cell_id), {
                                 .layout = {
-                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                                    .sizing = { .width = CLAY_SIZING_FIXED(80), .height = CLAY_SIZING_FIT(0) },
                                     .padding = { 4, 4, 4, 4 },
                                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                                 },
@@ -1281,7 +1296,7 @@ RenderTournamentChart(u32 tournament_idx)
             CLAY(CLAY_ID("LeftPanel"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = {.width = CLAY_SIZING_FIXED(180), .height = CLAY_SIZING_GROW(0)},
+                    .sizing = {.width = CLAY_SIZING_FIXED(200), .height = CLAY_SIZING_GROW(0)},
                     .padding = { 12, 12, 12, 12 },
                     .childGap = 12
                 },
@@ -1338,13 +1353,6 @@ RenderTournamentChart(u32 tournament_idx)
                         }
                     }
 
-                    // Registered players section
-                    CLAY_TEXT(CLAY_STRING("Registered Players:"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 16,
-                        .textColor = matchVsColor
-                    }));
-
                     // List of registered players (click to unregister)
                     CLAY(CLAY_ID("RegisteredPlayersList"), {
                         .layout = {
@@ -1376,7 +1384,7 @@ RenderTournamentChart(u32 tournament_idx)
                                     .fontSize = 16,
                                     .textColor = removeTextColor
                                 }));
-                                CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                                CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                                     .fontId = FONT_ID_BODY_16,
                                     .fontSize = 16,
                                     .textColor = stringColor
@@ -1393,13 +1401,6 @@ RenderTournamentChart(u32 tournament_idx)
                             }));
                         }
                     }
-
-                    // Not registered players section
-                    CLAY_TEXT(CLAY_STRING("Not Registered:"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 16,
-                        .textColor = matchVsColor
-                    }));
 
                     // List of not registered players (click to register)
                     CLAY(CLAY_ID("NotRegisteredPlayersList"), {
@@ -1438,7 +1439,7 @@ RenderTournamentChart(u32 tournament_idx)
                                         .fontSize = 16,
                                         .textColor = addButtonColor
                                     }));
-                                    CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                                    CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                                         .fontId = FONT_ID_BODY_16,
                                         .fontSize = 16,
                                         .textColor = stringColor
@@ -1447,15 +1448,6 @@ RenderTournamentChart(u32 tournament_idx)
                             }
 
                             idx = player->nxt;
-                        }
-
-                        if (not_registered_count == 0)
-                        {
-                            CLAY_TEXT(CLAY_STRING("All players registered"), CLAY_TEXT_CONFIG({
-                                .fontId = FONT_ID_BODY_16,
-                                .fontSize = 16,
-                                .textColor = matchVsColor
-                            }));
                         }
                     }
                 }
@@ -1510,7 +1502,7 @@ RenderTournamentChart(u32 tournament_idx)
                         u32 player_idx = BIT_TO_ENTITY_IDX(registered_positions[i]);
                         Entity *player = data.players.entities + player_idx;
 
-                        CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 14,
                             .textColor = stringColor
@@ -1627,12 +1619,12 @@ RenderTournamentChart(u32 tournament_idx)
                                             if (player1_idx != 0)
                                             {
                                                 Entity *player1 = data.players.entities + player1_idx;
-                                                name1 = str8_to_clay(player1->name);
+                                                name1 = str8_to_clay_truncated(data.frameArena, player1->name, MAX_DISPLAY_NAME_LEN);
                                             }
                                             if (player2_idx != 0)
                                             {
                                                 Entity *player2 = data.players.entities + player2_idx;
-                                                name2 = str8_to_clay(player2->name);
+                                                name2 = str8_to_clay_truncated(data.frameArena, player2->name, MAX_DISPLAY_NAME_LEN);
                                             }
 
                                             RenderMatchSlot(name1, name2, player1_idx, player2_idx, pos1, pos2, match_id);
@@ -2060,7 +2052,7 @@ RenderPlayers(void)
                             .sizing = { .width = CLAY_SIZING_GROW(0) }
                         }
                     }) {
-                        CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 16,
                             .textColor = stringColor

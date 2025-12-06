@@ -1,4 +1,5 @@
 #include "layout.h"
+#include "players.h"
 #define CLAY_IMPLEMENTATION
 
 #include "core.h"
@@ -60,6 +61,7 @@ main(void)
     String8 chiara   = str8_lit("Chiara");
     String8 andrea   = str8_lit("Andrea");
     String8 francesca = str8_lit("Francesca"); 
+    String8 longname = str8_lit("sjdkfjslfjlkdsjfudskfjdskfjlskdjfkdlsjflkdjflkdj");
 
     String8 pingpong    = str8_lit("Ping Pong");
     String8 machiavelli = str8_lit("Machiavelli");
@@ -81,6 +83,7 @@ main(void)
     entity_list_add(&players, chiara);
     entity_list_add(&players, andrea);
     entity_list_add(&players, francesca);
+    entity_list_add(&players, longname);
 
     entity_list_add(&tournaments, pingpong);
     entity_list_add(&tournaments, machiavelli);
@@ -95,12 +98,13 @@ main(void)
     entity_list_register(&players, &tournaments, emilia,   pingpong);
     entity_list_register(&players, &tournaments, maya,     pingpong);
 
-    entity_list_register(&players, &tournaments, marco, pingpong);
-    entity_list_register(&players, &tournaments, sofia, pingpong);
-    entity_list_register(&players, &tournaments, luca, pingpong);
-    entity_list_register(&players, &tournaments, giulia, pingpong);
-    entity_list_register(&players, &tournaments, matteo, pingpong);
-    entity_list_register(&players, &tournaments, chiara, pingpong);
+    entity_list_register(&players, &tournaments, marco,    pingpong);
+    entity_list_register(&players, &tournaments, sofia,    pingpong);
+    entity_list_register(&players, &tournaments, luca,     pingpong);
+    entity_list_register(&players, &tournaments, giulia,   pingpong);
+    entity_list_register(&players, &tournaments, matteo,   pingpong);
+    entity_list_register(&players, &tournaments, chiara,   pingpong);
+    entity_list_register(&players, &tournaments, longname, pingpong);
     // entity_list_register(&players, &tournaments, andrea, pingpong);
     // entity_list_register(&players, &tournaments, francesca, pingpong);
 
@@ -121,7 +125,8 @@ main(void)
             .height = GetScreenHeight()
         });
 
-        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        // Reset cursor state at start of frame (handlers will update it)
+        data.mouseCursor = MOUSE_CURSOR_DEFAULT;
 
         Vector2 mousePosition = GetMousePosition();
         Vector2 scrollDelta = GetMouseWheelMoveV();
@@ -130,6 +135,9 @@ main(void)
         Clay_UpdateScrollContainers(true, (Clay_Vector2) { scrollDelta.x, scrollDelta.y }, GetFrameTime());
 
         Clay_RenderCommandArray renderCommands = CreateLayout();
+
+        // Set cursor before and after drawing (macOS may reset during frame)
+        // SetMouseCursor(data.mouseCursor);
 
         BeginDrawing();
         ClearBackground(BLACK);
@@ -152,7 +160,10 @@ main(void)
             TextInput_RenderCursor(&data.textInputs[data.focusedTextbox], bounding_box, scroll_data);
         }
 
+
         EndDrawing();
+
+        SetMouseCursor(data.mouseCursor);
     }
 
     Clay_Raylib_Close();

@@ -77,6 +77,9 @@ struct ClayVideoDemo_Data {
     // Text inputs
     TextBoxEnum focusedTextbox;
     TextInput textInputs[TEXTBOX_COUNT];
+
+    // Mouse cursor (set once per frame to avoid flickering)
+    int mouseCursor;
 };
 
 typedef struct {
