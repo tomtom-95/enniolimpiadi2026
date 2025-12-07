@@ -31,10 +31,11 @@ typedef enum Page
 }
 Page;
 
-#define TEXTBOX_LIST                                               \
-    X(TEXTBOX_NULL,    "",                "")                      \
-    X(TEXTBOX_Events,  "EventNameInput",  "EventNameInputScroll")  \
-    X(TEXTBOX_Players, "PlayerNameInput", "PlayerNameInputScroll")
+#define TEXTBOX_LIST                                                     \
+    X(TEXTBOX_NULL,        "",                    "")                     \
+    X(TEXTBOX_Events,      "EventNameInput",      "EventNameInputScroll") \
+    X(TEXTBOX_Players,     "PlayerNameInput",     "PlayerNameInputScroll")\
+    X(TEXTBOX_EventRename, "EventRenameInput",    "EventRenameInputScroll")
 
 typedef enum TextBoxEnum
 {
@@ -90,6 +91,9 @@ struct ClayVideoDemo_Data {
     // Confirmation dialog for deleting a tournament
     bool showDeleteTournamentConfirm;
     u32 deleteTournamentIdx;
+
+    // Inline rename state for events (0 = not renaming)
+    u32 renamingEventIdx;
 };
 
 typedef struct {

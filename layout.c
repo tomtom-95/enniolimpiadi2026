@@ -117,7 +117,6 @@ void
 HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
-    // SetMouseCursor(data.mouseCursor);
     Page page = (Page)userData;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -428,6 +427,69 @@ HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerD
         {
             tournament->format = FORMAT_SINGLE_ELIMINATION;
         }
+    }
+}
+
+void
+HandleStartRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        u32 event_idx = (u32)userData;
+        data.renamingEventIdx = event_idx;
+        data.focusedTextbox = TEXTBOX_EventRename;
+
+        // Pre-fill the textbox with the current event name
+        Entity *tournament = data.tournaments.entities + event_idx;
+        TextInput *input = &data.textInputs[TEXTBOX_EventRename];
+        u32 copy_len = tournament->name.len < TEXT_INPUT_MAX_LEN - 1
+            ? (u32)tournament->name.len
+            : TEXT_INPUT_MAX_LEN - 1;
+        for (u32 i = 0; i < copy_len; i++)
+        {
+            input->buffer[i] = (char)tournament->name.str[i];
+        }
+        input->buffer[copy_len] = '\0';
+        input->len = copy_len;
+        input->cursorPos = copy_len;
+        input->blinkTimer = 0.0f;
+    }
+}
+
+void
+HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        if (data.renamingEventIdx != 0)
+        {
+            Entity *tournament = data.tournaments.entities + data.renamingEventIdx;
+            TextInput *input = &data.textInputs[TEXTBOX_EventRename];
+
+            if (input->len > 0)
+            {
+                // Rename tournament
+                // NOTE: this is a memory leaks but who cares
+                tournament->name = str8_copy(data.arena,  str8((u8 *)input->buffer, input->len));
+            }
+
+            // Clear rename state
+            data.renamingEventIdx = 0;
+            data.focusedTextbox = TEXTBOX_NULL;
+        }
+    }
+}
+
+void
+HandleCancelRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        data.renamingEventIdx = 0;
+        data.focusedTextbox = TEXTBOX_NULL;
     }
 }
 
@@ -2043,11 +2105,11 @@ RenderEventsActions(u32 tournament_idx)
     CLAY(CLAY_IDI("EventActions", tournament_idx), {
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .sizing = { .width = CLAY_SIZING_FIXED(150) },
+            .sizing = { .width = CLAY_SIZING_FIXED(220) },
             .childGap = 8
         }
     }) {
-        // Edit button
+        // Edit button (opens tournament details)
         CLAY_AUTO_ID({
             .layout = {
                 .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
@@ -2059,7 +2121,25 @@ RenderEventsActions(u32 tournament_idx)
         }) {
             Clay_OnHover(HandleEditTournament, (intptr_t)tournament_idx);
 
-            CLAY_TEXT(CLAY_STRING("Edit"), CLAY_TEXT_CONFIG({
+            CLAY_TEXT(CLAY_STRING("Open"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 14,
+                .textColor = COLOR_WHITE
+            }));
+        }
+        // Rename button
+        CLAY_AUTO_ID({
+            .layout = {
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 12, 12, 6, 6 },
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentOrange,
+            .cornerRadius = CLAY_CORNER_RADIUS(8)
+        }) {
+            Clay_OnHover(HandleStartRenameEvent, (intptr_t)tournament_idx);
+
+            CLAY_TEXT(CLAY_STRING("Rename"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
                 .fontSize = 14,
                 .textColor = COLOR_WHITE
@@ -2230,7 +2310,7 @@ RenderEventsList(void)
                 }
                 CLAY(CLAY_ID("EventActionsHeader"), {
                     .layout = {
-                        .sizing = { .width = CLAY_SIZING_FIXED(150) }
+                        .sizing = { .width = CLAY_SIZING_FIXED(220) }
                     }
                 }) {
                     CLAY_TEXT(CLAY_STRING("ACTIONS"), CLAY_TEXT_CONFIG({
@@ -2728,6 +2808,130 @@ RenderConfirmationModal(void)
     }
 }
 
+void
+RenderRenameModal(void)
+{
+    if (data.renamingEventIdx == 0) return;
+
+    Entity *tournament = data.tournaments.entities + data.renamingEventIdx;
+    Clay_String currentName = str8_to_clay(tournament->name);
+
+    // Process keyboard input when focused
+    if (data.focusedTextbox == TEXTBOX_EventRename)
+    {
+        TextInput_ProcessKeyboard(&data.textInputs[TEXTBOX_EventRename]);
+    }
+
+    // Full-screen overlay that blocks all interactions
+    CLAY(CLAY_ID("RenameModalOverlay"), {
+        .layout = {
+            .sizing = layoutExpand,
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        },
+        .backgroundColor = modalOverlayColor,
+        .floating = {
+            .attachTo = CLAY_ATTACH_TO_ROOT,
+            .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
+            .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_CAPTURE
+        }
+    }) {
+        // Rename dialog box
+        CLAY(CLAY_ID("RenameDialog"), {
+            .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 24, 24, 20, 20 },
+                .childGap = 12,
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+            },
+            .backgroundColor = dashCardBg,
+            .cornerRadius = CLAY_CORNER_RADIUS(12),
+            .border = { .width = {3, 3, 3, 3}, .color = dashAccentOrange }
+        }) {
+            // Title row
+            CLAY(CLAY_ID("RenameTitleRow"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                }
+            }) {
+                CLAY_TEXT(CLAY_STRING("Rename Event"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 18,
+                    .textColor = dashAccentOrange,
+                    .wrapMode = CLAY_TEXT_WRAP_NONE
+                }));
+            }
+
+            // Current name display
+            CLAY(CLAY_ID("RenameCurrentNameRow"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .padding = { 12, 12, 8, 8 },
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                },
+                .backgroundColor = dashAccentPurple,
+                .cornerRadius = CLAY_CORNER_RADIUS(6)
+            }) {
+                CLAY_TEXT(currentName, CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 14,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+
+            // Text input for new name
+            TextInput_Render(TEXTBOX_EventRename, CLAY_STRING("EventRenameInput"),
+                CLAY_STRING("EventRenameInputScroll"), CLAY_STRING("Enter new name..."));
+
+            // Buttons row
+            CLAY(CLAY_ID("RenameButtonsRow"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .childGap = 16
+                }
+            }) {
+                // OK button
+                CLAY(CLAY_ID("RenameOkButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 16, 16, 10, 10 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? dashAccentTeal : addButtonColor,
+                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                }) {
+                    Clay_OnHover(HandleConfirmRenameEvent, 0);
+                    CLAY_TEXT(CLAY_STRING("OK"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+
+                // Cancel button
+                CLAY(CLAY_ID("RenameCancelButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 16, 16, 10, 10 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                }) {
+                    Clay_OnHover(HandleCancelRenameEvent, 0);
+                    CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+        }
+    }
+}
+
 Clay_RenderCommandArray
 CreateLayout(void)
 {
@@ -2784,8 +2988,9 @@ CreateLayout(void)
                 break;
         }
 
-        // Render modal overlay (floating, rendered last so it appears on top)
+        // Render modal overlays (floating, rendered last so they appear on top)
         RenderConfirmationModal();
+        RenderRenameModal();
     }
 
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();
