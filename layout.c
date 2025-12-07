@@ -9,7 +9,6 @@
 #include "layout.h"
 
 #include "raylib/raylib.h"
-// #include "custom_elements.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // Colors
@@ -153,8 +152,8 @@ HandleDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, i
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         u32 tournament_idx = (u32)userData;
-        Entity *tournament = data.tournaments.entities + tournament_idx;
-        entity_list_remove(&data.tournaments, &data.players, tournament->name);
+        data.deleteTournamentIdx = tournament_idx;
+        data.showDeleteTournamentConfirm = true;
     }
 }
 
@@ -386,6 +385,30 @@ HandleCancelReturnToRegistration(Clay_ElementId elementId, Clay_PointerData poin
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         data.showReturnToRegistrationConfirm = false;
+    }
+}
+
+void
+HandleConfirmDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.deleteTournamentIdx;
+        entity_list_remove(&data.tournaments, &data.players, tournament->name);
+        data.deleteTournamentIdx = 0;
+        data.showDeleteTournamentConfirm = false;
+    }
+}
+
+void
+HandleCancelDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        data.deleteTournamentIdx = 0;
+        data.showDeleteTournamentConfirm = false;
     }
 }
 
@@ -2452,7 +2475,29 @@ static Clay_Color modalOverlayColor = { 0, 0, 0, 150 };
 void
 RenderConfirmationModal(void)
 {
-    if (!data.showReturnToRegistrationConfirm) return;
+    bool showReturnModal = data.showReturnToRegistrationConfirm;
+    bool showDeleteModal = data.showDeleteTournamentConfirm;
+
+    if (!showReturnModal && !showDeleteModal) return;
+
+    // Determine modal content based on which type is being shown
+    Clay_String titleText = showDeleteModal
+        ? CLAY_STRING("Delete Tournament?")
+        : CLAY_STRING("Are you sure?");
+    Clay_String messageText = showDeleteModal
+        ? CLAY_STRING("This tournament will be permanently deleted.")
+        : CLAY_STRING("All tournament progress will be lost.");
+    Clay_String confirmText = showDeleteModal
+        ? CLAY_STRING("Yes, delete")
+        : CLAY_STRING("Yes, reset");
+
+    // Get tournament name for delete modal
+    Clay_String tournamentName = CLAY_STRING("");
+    if (showDeleteModal && data.deleteTournamentIdx != 0)
+    {
+        Entity *tournament = data.tournaments.entities + data.deleteTournamentIdx;
+        tournamentName = str8_to_clay(tournament->name);
+    }
 
     // Full-screen overlay that blocks all interactions
     CLAY(CLAY_ID("ModalOverlay"), {
@@ -2471,28 +2516,63 @@ RenderConfirmationModal(void)
         CLAY(CLAY_ID("ConfirmDialog"), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = {.width = CLAY_SIZING_FIXED(340), .height = CLAY_SIZING_FIT(0)},
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
                 .padding = { 24, 24, 20, 20 },
-                .childGap = 16,
+                .childGap = 12,
                 .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
             },
             .backgroundColor = dashCardBg,
             .cornerRadius = CLAY_CORNER_RADIUS(12),
             .border = { .width = {3, 3, 3, 3}, .color = dashAccentCoral }
         }) {
-            // Title
-            CLAY_TEXT(CLAY_STRING("Are you sure?"), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_PRESS_START_2P,
-                .fontSize = 18,
-                .textColor = dashAccentCoral
-            }));
+            // Title row (centered)
+            CLAY(CLAY_ID("ModalTitleRow"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                }
+            }) {
+                CLAY_TEXT(titleText, CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 18,
+                    .textColor = dashAccentCoral,
+                    .wrapMode = CLAY_TEXT_WRAP_NONE 
+                }));
+            }
 
-            // Warning message
-            CLAY_TEXT(CLAY_STRING("All tournament progress will be lost."), CLAY_TEXT_CONFIG({
-                .fontId = FONT_ID_BODY_16,
-                .fontSize = 14,
-                .textColor = matchVsColor
-            }));
+            // Tournament name (only for delete modal)
+            if (showDeleteModal && tournamentName.length > 0)
+            {
+                CLAY(CLAY_ID("ModalTournamentNameRow"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 12, 12, 8, 8 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = dashAccentOrange,
+                    .cornerRadius = CLAY_CORNER_RADIUS(6)
+                }) {
+                    CLAY_TEXT(tournamentName, CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_PRESS_START_2P,
+                        .fontSize = 14,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+
+            // Warning message row (centered)
+            CLAY(CLAY_ID("ModalMessageRow"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                }
+            }) {
+                CLAY_TEXT(messageText, CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 14,
+                    .textColor = matchVsColor
+                }));
+            }
 
             // Buttons row
             CLAY(CLAY_ID("ModalButtonsRow"), {
@@ -2512,8 +2592,12 @@ RenderConfirmationModal(void)
                     .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : dashAccentCoral,
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
-                    Clay_OnHover(HandleConfirmReturnToRegistration, 0);
-                    CLAY_TEXT(CLAY_STRING("Yes, reset"), CLAY_TEXT_CONFIG({
+                    if (showDeleteModal) {
+                        Clay_OnHover(HandleConfirmDeleteTournament, 0);
+                    } else {
+                        Clay_OnHover(HandleConfirmReturnToRegistration, 0);
+                    }
+                    CLAY_TEXT(confirmText, CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 14,
                         .textColor = COLOR_WHITE
@@ -2530,7 +2614,11 @@ RenderConfirmationModal(void)
                     .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
-                    Clay_OnHover(HandleCancelReturnToRegistration, 0);
+                    if (showDeleteModal) {
+                        Clay_OnHover(HandleCancelDeleteTournament, 0);
+                    } else {
+                        Clay_OnHover(HandleCancelReturnToRegistration, 0);
+                    }
                     CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 14,

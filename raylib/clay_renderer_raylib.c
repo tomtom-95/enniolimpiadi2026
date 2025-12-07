@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "raylib.h"
 #include "raymath.h"
 #include "stdint.h"
@@ -230,16 +232,19 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                 CustomLayoutElement *customElement = (CustomLayoutElement *)config->customData;
                 if (!customElement) continue;
                 switch (customElement->type) {
-                    case CUSTOM_LAYOUT_ELEMENT_TYPE_3D_MODEL: {
+                    case CUSTOM_LAYOUT_ELEMENT_TYPE_3D_MODEL:
+                    {
                         Clay_BoundingBox rootBox = renderCommands.internalArray[0].boundingBox;
                         float scaleValue = CLAY__MIN(CLAY__MIN(1, 768 / rootBox.height) * CLAY__MAX(1, rootBox.width / 1024), 1.5f);
                         Ray positionRay = GetScreenToWorldPointWithZDistance((Vector2) { renderCommand->boundingBox.x + renderCommand->boundingBox.width / 2, renderCommand->boundingBox.y + (renderCommand->boundingBox.height / 2) + 20 }, Raylib_camera, (int)roundf(rootBox.width), (int)roundf(rootBox.height), 140);
                         BeginMode3D(Raylib_camera);
-                            DrawModel(customElement->customData.model.model, positionRay.position, customElement->customData.model.scale * scaleValue, WHITE);        // Draw 3d model with texture
+                        DrawModel(customElement->customData.model.model, positionRay.position,
+                            customElement->customData.model.scale * scaleValue, WHITE);        // Draw 3d model with texture
                         EndMode3D();
                         break;
                     }
-                    case CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS: {
+                    case CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS:
+                    {
                         CustomLayoutElement_BracketConnections *bracketData = &customElement->customData.bracketConnections;
                         uint32_t num_players = bracketData->num_players;
                         float yOffset = bracketData->yOffset;
@@ -262,7 +267,9 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                         Clay_ElementData chartData = Clay_GetElementData(
                             Clay_GetElementId(CLAY_STRING("TournamentChart")));
 
-                        if (!chartData.found) break;
+                        assert(chartData.found);
+
+                        // if (!chartData.found) break;
 
                         Clay_BoundingBox chartBox = chartData.boundingBox;
                         chartBox.y += yOffset;
@@ -293,8 +300,10 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                                 // Get bounding boxes
                                 Clay_ElementData current_data = Clay_GetElementData(
                                     Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), current_match_id));
+
                                 Clay_ElementData feeder1_data = Clay_GetElementData(
                                     Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder1_match_id));
+
                                 Clay_ElementData feeder2_data = Clay_GetElementData(
                                     Clay_GetElementIdWithIndex(CLAY_STRING("MatchBorder"), feeder2_match_id));
 

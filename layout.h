@@ -86,6 +86,10 @@ struct ClayVideoDemo_Data {
 
     // Confirmation dialog for returning to registration
     bool showReturnToRegistrationConfirm;
+
+    // Confirmation dialog for deleting a tournament
+    bool showDeleteTournamentConfirm;
+    u32 deleteTournamentIdx;
 };
 
 typedef struct {
