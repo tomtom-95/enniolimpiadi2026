@@ -78,6 +78,10 @@ const int FONT_ID_PRESS_START_2P  = 1;
 
 const float SLOT_PLAYER_FONT_SIZE = 16.0f;
 
+const float TEXTBOX_WIDTH   = 300.0f;
+const float TEXTBOX_HEIGHT  = 40.0f;
+const float TEXTBOX_PADDING = 12.0f;
+
 Clay_Sizing layoutExpand = {
     .width = CLAY_SIZING_GROW(0),
     .height = CLAY_SIZING_GROW(0)
@@ -219,8 +223,7 @@ HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t
         Clay_ScrollContainerData scrollData = Clay_GetScrollContainerData(scrollId);
         float scrollOffsetX = (scrollData.found && scrollData.scrollPosition) ? scrollData.scrollPosition->x : 0.0f;
 
-        float inputPaddingLeft = 12.0f;
-        float clickRelativeX = mousePos.x - inputBox.x - inputPaddingLeft - scrollOffsetX;
+        float clickRelativeX = mousePos.x - inputBox.x - TEXTBOX_PADDING - scrollOffsetX;
 
         // Update cursor
         TextInput *input = &data.textInputs[textBoxEnum];
@@ -624,28 +627,61 @@ HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData,
 void
 TextInput_ProcessKeyboard(TextInput *input)
 {
+    float dt = GetFrameTime();
+
     // Update blink timer
-    input->blinkTimer += GetFrameTime();
+    input->blinkTimer += dt;
     if (input->blinkTimer > 1.0f) {
         input->blinkTimer -= 1.0f;
     }
 
     // Handle character input - insert at cursor position
+    const float maxTextWidth = TEXTBOX_WIDTH - (TEXTBOX_PADDING * 2);
+
     int key = GetCharPressed();
     while (key > 0)
     {
+        // TODO: this must be refactored when I want to really get a good textbox done
         if (key >= 32 && key <= 125 && input->len < TEXT_INPUT_MAX_LEN - 1)
         {
-            // Shift characters after cursor to make room
-            for (u32 i = input->len; i > input->cursorPos; i--)
+            // Build temporary buffer with the new character inserted
+            char tempBuffer[TEXT_INPUT_MAX_LEN];
+            for (u32 i = 0; i < input->cursorPos; i++)
             {
-                input->buffer[i] = input->buffer[i - 1];
+                tempBuffer[i] = input->buffer[i];
             }
-            input->buffer[input->cursorPos] = (char)key;
-            input->len++;
-            input->cursorPos++;
-            input->buffer[input->len] = '\0';
-            input->blinkTimer = 0.0f;
+            tempBuffer[input->cursorPos] = (char)key;
+            for (u32 i = input->cursorPos; i < input->len; i++)
+            {
+                tempBuffer[i + 1] = input->buffer[i];
+            }
+            tempBuffer[input->len + 1] = '\0';
+
+            // Check if the new text would fit
+            Vector2 textSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], tempBuffer, 16.0f, 0);
+
+            char tempBuffer2[TEXT_INPUT_MAX_LEN];
+            for (u32 i = 0; i < input->len; i++)
+            {
+                tempBuffer2[i] = tempBuffer[i];
+            }
+            tempBuffer2[input->len] = '\0';
+            Vector2 textSize2 = MeasureTextEx(data.fonts[FONT_ID_BODY_16], tempBuffer2, 16.0f, 0);
+            Vector2 wideCharSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], "M", 16.0f, 0);
+
+            if (textSize2.x + wideCharSize.x < maxTextWidth)
+            {
+                // Shift characters after cursor to make room
+                for (u32 i = input->len; i > input->cursorPos; i--)
+                {
+                    input->buffer[i] = input->buffer[i - 1];
+                }
+                input->buffer[input->cursorPos] = (char)key;
+                input->len++;
+                input->cursorPos++;
+                input->buffer[input->len] = '\0';
+                input->blinkTimer = 0.0f;
+            }
         }
         key = GetCharPressed();
     }
@@ -709,13 +745,31 @@ TextInput_Render(TextBoxEnum textBoxEnum, Clay_String elementId,
     Clay_String scrollId, Clay_String placeholder)
 {
     bool isFocused = (data.focusedTextbox == textBoxEnum);
-    Clay_Color inputBorderColor = isFocused ? COLOR_BLUE : textInputBorderColor;
+    TextInput *input = &data.textInputs[textBoxEnum];
+
+    // Check if current text is at max width
+    const float maxTextWidth = TEXTBOX_WIDTH - (TEXTBOX_PADDING * 2);
+    bool isAtMaxWidth = false;
+    if (input->len > 0)
+    {
+        Vector2 textSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], input->buffer, 16.0f, 0);
+
+        // Consider at max if adding even a narrow character would overflow
+        // Use 'i' as reference for the narrowest typical character
+        Vector2 narrowCharSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], "i", 16.0f, 0);
+        Vector2 wideCharSize = MeasureTextEx(data.fonts[FONT_ID_BODY_16], "M", 16.0f, 0);
+        isAtMaxWidth = (textSize.x + wideCharSize.x > maxTextWidth);
+    }
+
+    // Use red border when at max width, otherwise normal border color
+    Clay_Color inputBorderColor = isAtMaxWidth ? COLOR_RED :
+                                  (isFocused ? COLOR_BLUE : textInputBorderColor);
 
     // Outer container: styling (background, border, corner radius)
     CLAY(Clay_GetElementId(elementId), {
         .layout = {
-            .sizing = {.width = CLAY_SIZING_FIXED(300), .height = CLAY_SIZING_FIXED(40)},
-            .padding = { 12, 12, 0, 0 },
+            .sizing = {.width = CLAY_SIZING_FIXED(TEXTBOX_WIDTH), .height = CLAY_SIZING_FIXED(TEXTBOX_HEIGHT)},
+            .padding = { (u16)TEXTBOX_PADDING, (u16)TEXTBOX_PADDING, 0, 0 },
         },
         .backgroundColor = textInputBackgroundColor,
         .cornerRadius = CLAY_CORNER_RADIUS(4),
@@ -723,15 +777,12 @@ TextInput_Render(TextBoxEnum textBoxEnum, Clay_String elementId,
     }) {
         Clay_OnHover(HandleTextInput, textBoxEnum);
 
-        TextInput *input = &data.textInputs[textBoxEnum];
-
         // Inner container with scroll
         CLAY(Clay_GetElementId(scrollId), {
             .layout = {
                 .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)},
                 .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
             },
-            .clip = { .horizontal = true, .childOffset = Clay_GetScrollOffset() }
         }) {
             if (input->len > 0)
             {
@@ -753,6 +804,35 @@ TextInput_Render(TextBoxEnum textBoxEnum, Clay_String elementId,
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 16,
                     .textColor = matchVsColor
+                }));
+            }
+        }
+
+        // Floating warning message - doesn't affect layout
+        if (isAtMaxWidth)
+        {
+            CLAY(CLAY_IDI("TextInputWarning", textBoxEnum), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                    .padding = { 6, 6, 4, 4 }
+                },
+                .backgroundColor = { 255, 240, 240, 255 },
+                .cornerRadius = CLAY_CORNER_RADIUS(4),
+                .border = { .width = {1, 1, 1, 1}, .color = COLOR_RED },
+                .floating = {
+                    .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+                    .parentId = Clay_GetElementId(elementId).id,
+                    .attachPoints = {
+                        .element = CLAY_ATTACH_POINT_LEFT_TOP,
+                        .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM
+                    },
+                    .offset = { 0, 4 }
+                }
+            }) {
+                CLAY_TEXT(CLAY_STRING("Maximum length reached"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 12,
+                    .textColor = COLOR_RED
                 }));
             }
         }
@@ -779,14 +859,13 @@ TextInput_RenderCursor(TextInput *input, Clay_BoundingBox inputBox,
         cursorOffsetX = textSize.x;
     }
 
-    float inputPaddingLeft = 12.0f;
     float scrollOffsetX = (scrollData.found && scrollData.scrollPosition) ? scrollData.scrollPosition->x : 0.0f;
-    float cursorX = inputBox.x + inputPaddingLeft + cursorOffsetX + scrollOffsetX;
+    float cursorX = inputBox.x + TEXTBOX_PADDING + cursorOffsetX + scrollOffsetX;
     float cursorY = inputBox.y + (inputBox.height - 18.0f) / 2.0f;
 
     // Clip cursor to textbox bounds
-    float clipLeft = inputBox.x + inputPaddingLeft;
-    float clipRight = inputBox.x + inputBox.width - inputPaddingLeft;
+    float clipLeft = inputBox.x + TEXTBOX_PADDING;
+    float clipRight = inputBox.x + inputBox.width - TEXTBOX_PADDING;
 
     if (cursorX >= clipLeft && cursorX <= clipRight)
     {
@@ -2372,7 +2451,6 @@ RenderEventsList(void)
             },
             .backgroundColor = dashCardBg,
             .cornerRadius = { 0, 0, 12, 12 },
-            .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
             // List header
             CLAY(CLAY_ID("EventsListHeader"), {
@@ -2678,8 +2756,7 @@ RenderPlayersList(void)
                 .childGap = 2,
             },
             .backgroundColor = dashCardBg,
-            .cornerRadius = { 0, 0, 12, 12 },
-            .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+            .cornerRadius = { 0, 0, 12, 12 }
         }) {
             // List header
             CLAY(CLAY_ID("PlayersListHeader"), {

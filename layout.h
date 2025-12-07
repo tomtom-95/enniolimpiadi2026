@@ -31,11 +31,11 @@ typedef enum Page
 }
 Page;
 
-#define TEXTBOX_LIST                                                     \
-    X(TEXTBOX_NULL,        "",                    "")                     \
-    X(TEXTBOX_Events,      "EventNameInput",      "EventNameInputScroll") \
-    X(TEXTBOX_Players,     "PlayerNameInput",     "PlayerNameInputScroll")\
-    X(TEXTBOX_EventRename, "EventRenameInput",    "EventRenameInputScroll")\
+#define TEXTBOX_LIST                                                         \
+    X(TEXTBOX_NULL,        "",                    "")                        \
+    X(TEXTBOX_Events,      "EventNameInput",      "EventNameInputScroll")    \
+    X(TEXTBOX_Players,     "PlayerNameInput",     "PlayerNameInputScroll")   \
+    X(TEXTBOX_EventRename, "EventRenameInput",    "EventRenameInputScroll")  \
     X(TEXTBOX_PlayerRename,"PlayerRenameInput",   "PlayerRenameInputScroll")
 
 typedef enum TextBoxEnum
