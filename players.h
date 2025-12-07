@@ -35,11 +35,18 @@ typedef enum TournamentFormat {
 } TournamentFormat;
 
 typedef enum MatchResult {
-    WIN  = 0,
-    DRAW = 1,
-    LOSE = 2
+    MATCH_RESULT_TBD,   // The match must still be played
+    MATCH_RESULT_WIN,
+    MATCH_RESULT_DRAW,
+    MATCH_RESULT_LOSE,
 } MatchResult;
 
+typedef struct MatchScore {
+    u8 row_score;  // Score of the row player
+    u8 col_score;  // Score of the column player
+} MatchScore;
+
+// TODO: really understand how group phase is populated
 typedef struct GroupPhase GroupPhase;
 typedef struct GroupPhase {
     u8 num_groups;
@@ -56,7 +63,10 @@ typedef struct GroupPhase {
     u8 player_slot[MAX_NUM_ENTITIES + 1];
 
     // Results matrix (uses local indices)
-    u8 results[MAX_GROUPS][MAX_GROUP_SIZE][MAX_GROUP_SIZE];
+    // results[g][row][col] stores the score from row player's match against col player
+    // Storing the upper diagonal is enough information, the lower one is redundant
+    MatchScore  scores[MAX_GROUPS][MAX_GROUP_SIZE][MAX_GROUP_SIZE];
+    MatchResult results[MAX_GROUPS][MAX_GROUP_SIZE][MAX_GROUP_SIZE];
 } GroupPhase;
 
 typedef struct Entity Entity;

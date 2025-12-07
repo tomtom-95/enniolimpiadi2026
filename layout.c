@@ -2058,7 +2058,10 @@ RenderGroupsChart(Entity *tournament)
                 // Groups in this row
                 u32 start_g = row * groups_per_row;
                 u32 end_g = start_g + groups_per_row;
-                if (end_g > num_groups) end_g = num_groups;
+                if (end_g > num_groups)
+                {
+                    end_g = num_groups;
+                }
 
                 for (u32 g = start_g; g < end_g; g++)
                 {
@@ -2074,7 +2077,7 @@ RenderGroupsChart(Entity *tournament)
 
                     Clay_Color groupAccent = groupAccentColors[g % numAccentColors];
 
-                    // Outer container with accent bar (matching app style)
+                    // Outer container with accent bar
                     CLAY(CLAY_IDI("GroupOuter", g), {
                         .layout = {
                             .layoutDirection = CLAY_TOP_TO_BOTTOM,

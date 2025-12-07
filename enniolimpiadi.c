@@ -38,7 +38,7 @@ main(void)
     SetTextureFilter(fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
     Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
-    // Clay_SetDebugModeEnabled(true);
+    Clay_SetDebugModeEnabled(true);
 
     Arena *arena = arena_alloc(MegaByte(1));
 
