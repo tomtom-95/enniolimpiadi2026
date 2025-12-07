@@ -157,6 +157,18 @@ HandleDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, i
 }
 
 void
+HandleDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        u32 player_idx = (u32)userData;
+        data.deletePlayerIdx = player_idx;
+        data.showDeletePlayerConfirm = true;
+    }
+}
+
+void
 HandleOuterContainerInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
@@ -412,6 +424,30 @@ HandleCancelDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerD
 }
 
 void
+HandleConfirmDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *player = data.players.entities + data.deletePlayerIdx;
+        entity_list_remove(&data.players, &data.tournaments, player->name);
+        data.deletePlayerIdx = 0;
+        data.showDeletePlayerConfirm = false;
+    }
+}
+
+void
+HandleCancelDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        data.deletePlayerIdx = 0;
+        data.showDeletePlayerConfirm = false;
+    }
+}
+
+void
 HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
@@ -465,14 +501,13 @@ HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData,
     {
         if (data.renamingEventIdx != 0)
         {
-            Entity *tournament = data.tournaments.entities + data.renamingEventIdx;
             TextInput *input = &data.textInputs[TEXTBOX_EventRename];
 
             if (input->len > 0)
             {
-                // Rename tournament
-                // NOTE: this is a memory leaks but who cares
-                tournament->name = str8_copy(data.arena,  str8((u8 *)input->buffer, input->len));
+                // NOTE: this is a memory leak but who cares
+                String8 new_name = str8_copy(data.arena, str8((u8 *)input->buffer, input->len));
+                entity_list_rename(&data.tournaments, data.renamingEventIdx, new_name);
             }
 
             // Clear rename state
@@ -489,6 +524,68 @@ HandleCancelRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, 
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         data.renamingEventIdx = 0;
+        data.focusedTextbox = TEXTBOX_NULL;
+    }
+}
+
+void
+HandleStartRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        u32 player_idx = (u32)userData;
+        data.renamingPlayerIdx = player_idx;
+        data.focusedTextbox = TEXTBOX_PlayerRename;
+
+        // Pre-fill the textbox with the current player name
+        Entity *player = data.players.entities + player_idx;
+        TextInput *input = &data.textInputs[TEXTBOX_PlayerRename];
+        u32 copy_len = player->name.len < TEXT_INPUT_MAX_LEN - 1
+            ? (u32)player->name.len
+            : TEXT_INPUT_MAX_LEN - 1;
+        for (u32 i = 0; i < copy_len; i++)
+        {
+            input->buffer[i] = (char)player->name.str[i];
+        }
+        input->buffer[copy_len] = '\0';
+        input->len = copy_len;
+        input->cursorPos = copy_len;
+        input->blinkTimer = 0.0f;
+    }
+}
+
+void
+HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        if (data.renamingPlayerIdx != 0)
+        {
+            TextInput *input = &data.textInputs[TEXTBOX_PlayerRename];
+
+            if (input->len > 0)
+            {
+                // NOTE: this is a memory leak but who cares
+                String8 new_name = str8_copy(data.arena, str8((u8 *)input->buffer, input->len));
+                entity_list_rename(&data.players, data.renamingPlayerIdx, new_name);
+            }
+
+            // Clear rename state
+            data.renamingPlayerIdx = 0;
+            data.focusedTextbox = TEXTBOX_NULL;
+        }
+    }
+}
+
+void
+HandleCancelRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        data.renamingPlayerIdx = 0;
         data.focusedTextbox = TEXTBOX_NULL;
     }
 }
@@ -2409,6 +2506,71 @@ RenderEvents(void)
 // Players main page
 
 void
+RenderPlayersActions(u32 player_idx)
+{
+    CLAY(CLAY_IDI("PlayerActions", player_idx), {
+        .layout = {
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+            .sizing = { .width = CLAY_SIZING_FIXED(220) },
+            .childGap = 8
+        }
+    }) {
+        // Open button (not implemented yet)
+        CLAY_AUTO_ID({
+            .layout = {
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 12, 12, 6, 6 },
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+            .cornerRadius = CLAY_CORNER_RADIUS(8)
+        }) {
+            CLAY_TEXT(CLAY_STRING("Open"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 14,
+                .textColor = COLOR_WHITE
+            }));
+        }
+        // Rename button
+        CLAY_AUTO_ID({
+            .layout = {
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 12, 12, 6, 6 },
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentOrange,
+            .cornerRadius = CLAY_CORNER_RADIUS(8)
+        }) {
+            Clay_OnHover(HandleStartRenamePlayer, (intptr_t)player_idx);
+
+            CLAY_TEXT(CLAY_STRING("Rename"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 14,
+                .textColor = COLOR_WHITE
+            }));
+        }
+        // Delete button
+        CLAY_AUTO_ID({
+            .layout = {
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 12, 12, 6, 6 },
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : removeButtonColor,
+            .cornerRadius = CLAY_CORNER_RADIUS(8)
+        }) {
+            Clay_OnHover(HandleDeletePlayer, (intptr_t)player_idx);
+
+            CLAY_TEXT(CLAY_STRING("Delete"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 14,
+                .textColor = removeTextColor
+            }));
+        }
+    }
+}
+
+void
 RenderPlayersBanner(void)
 {
     CLAY(CLAY_ID("PlayersBanner"), {
@@ -2550,6 +2712,17 @@ RenderPlayersList(void)
                         .textColor = dashLabelText
                     }));
                 }
+                CLAY(CLAY_ID("PlayerActionsHeader"), {
+                    .layout = {
+                        .sizing = { .width = CLAY_SIZING_FIXED(220) }
+                    }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("ACTIONS"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                }
             }
 
             // Player rows
@@ -2597,6 +2770,8 @@ RenderPlayersList(void)
                             .textColor = dashAccentTeal
                         }));
                     }
+
+                    RenderPlayersActions(idx);
                 }
 
                 idx = player->nxt;
@@ -2654,27 +2829,41 @@ void
 RenderConfirmationModal(void)
 {
     bool showReturnModal = data.showReturnToRegistrationConfirm;
-    bool showDeleteModal = data.showDeleteTournamentConfirm;
+    bool showDeleteTournamentModal = data.showDeleteTournamentConfirm;
+    bool showDeletePlayerModal = data.showDeletePlayerConfirm;
 
-    if (!showReturnModal && !showDeleteModal) return;
+    if (!showReturnModal && !showDeleteTournamentModal && !showDeletePlayerModal) return;
 
     // Determine modal content based on which type is being shown
-    Clay_String titleText = showDeleteModal
-        ? CLAY_STRING("Delete Tournament?")
-        : CLAY_STRING("Are you sure?");
-    Clay_String messageText = showDeleteModal
-        ? CLAY_STRING("This tournament will be permanently deleted.")
-        : CLAY_STRING("All tournament progress will be lost.");
-    Clay_String confirmText = showDeleteModal
-        ? CLAY_STRING("Yes, delete")
-        : CLAY_STRING("Yes, reset");
+    Clay_String titleText;
+    Clay_String messageText;
+    Clay_String confirmText;
 
-    // Get tournament name for delete modal
-    Clay_String tournamentName = CLAY_STRING("");
-    if (showDeleteModal && data.deleteTournamentIdx != 0)
+    if (showDeleteTournamentModal) {
+        titleText = CLAY_STRING("Delete Tournament?");
+        messageText = CLAY_STRING("This tournament will be permanently deleted.");
+        confirmText = CLAY_STRING("Yes, delete");
+    } else if (showDeletePlayerModal) {
+        titleText = CLAY_STRING("Delete Player?");
+        messageText = CLAY_STRING("This player will be permanently deleted.");
+        confirmText = CLAY_STRING("Yes, delete");
+    } else {
+        titleText = CLAY_STRING("Are you sure?");
+        messageText = CLAY_STRING("All tournament progress will be lost.");
+        confirmText = CLAY_STRING("Yes, reset");
+    }
+
+    // Get entity name for delete modals
+    Clay_String entityName = CLAY_STRING("");
+    if (showDeleteTournamentModal && data.deleteTournamentIdx != 0)
     {
         Entity *tournament = data.tournaments.entities + data.deleteTournamentIdx;
-        tournamentName = str8_to_clay(tournament->name);
+        entityName = str8_to_clay(tournament->name);
+    }
+    else if (showDeletePlayerModal && data.deletePlayerIdx != 0)
+    {
+        Entity *player = data.players.entities + data.deletePlayerIdx;
+        entityName = str8_to_clay(player->name);
     }
 
     // Full-screen overlay that blocks all interactions
@@ -2718,10 +2907,10 @@ RenderConfirmationModal(void)
                 }));
             }
 
-            // Tournament name (only for delete modal)
-            if (showDeleteModal && tournamentName.length > 0)
+            // Entity name (only for delete modals)
+            if ((showDeleteTournamentModal || showDeletePlayerModal) && entityName.length > 0)
             {
-                CLAY(CLAY_ID("ModalTournamentNameRow"), {
+                CLAY(CLAY_ID("ModalEntityNameRow"), {
                     .layout = {
                         .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
                         .padding = { 12, 12, 8, 8 },
@@ -2730,7 +2919,7 @@ RenderConfirmationModal(void)
                     .backgroundColor = dashAccentOrange,
                     .cornerRadius = CLAY_CORNER_RADIUS(6)
                 }) {
-                    CLAY_TEXT(tournamentName, CLAY_TEXT_CONFIG({
+                    CLAY_TEXT(entityName, CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 14,
                         .textColor = COLOR_WHITE
@@ -2770,8 +2959,10 @@ RenderConfirmationModal(void)
                     .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : dashAccentCoral,
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
-                    if (showDeleteModal) {
+                    if (showDeleteTournamentModal) {
                         Clay_OnHover(HandleConfirmDeleteTournament, 0);
+                    } else if (showDeletePlayerModal) {
+                        Clay_OnHover(HandleConfirmDeletePlayer, 0);
                     } else {
                         Clay_OnHover(HandleConfirmReturnToRegistration, 0);
                     }
@@ -2792,8 +2983,10 @@ RenderConfirmationModal(void)
                     .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
-                    if (showDeleteModal) {
+                    if (showDeleteTournamentModal) {
                         Clay_OnHover(HandleCancelDeleteTournament, 0);
+                    } else if (showDeletePlayerModal) {
+                        Clay_OnHover(HandleCancelDeletePlayer, 0);
                     } else {
                         Clay_OnHover(HandleCancelReturnToRegistration, 0);
                     }
@@ -2811,15 +3004,31 @@ RenderConfirmationModal(void)
 void
 RenderRenameModal(void)
 {
-    if (data.renamingEventIdx == 0) return;
+    bool renamingEvent = data.renamingEventIdx != 0;
+    bool renamingPlayer = data.renamingPlayerIdx != 0;
 
-    Entity *tournament = data.tournaments.entities + data.renamingEventIdx;
-    Clay_String currentName = str8_to_clay(tournament->name);
+    if (!renamingEvent && !renamingPlayer) return;
+
+    Clay_String currentName;
+    Clay_String titleText;
+    TextBoxEnum textbox;
+
+    if (renamingEvent) {
+        Entity *tournament = data.tournaments.entities + data.renamingEventIdx;
+        currentName = str8_to_clay(tournament->name);
+        titleText = CLAY_STRING("Rename Event");
+        textbox = TEXTBOX_EventRename;
+    } else {
+        Entity *player = data.players.entities + data.renamingPlayerIdx;
+        currentName = str8_to_clay(player->name);
+        titleText = CLAY_STRING("Rename Player");
+        textbox = TEXTBOX_PlayerRename;
+    }
 
     // Process keyboard input when focused
-    if (data.focusedTextbox == TEXTBOX_EventRename)
+    if (data.focusedTextbox == textbox)
     {
-        TextInput_ProcessKeyboard(&data.textInputs[TEXTBOX_EventRename]);
+        TextInput_ProcessKeyboard(&data.textInputs[textbox]);
     }
 
     // Full-screen overlay that blocks all interactions
@@ -2855,7 +3064,7 @@ RenderRenameModal(void)
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
                 }
             }) {
-                CLAY_TEXT(CLAY_STRING("Rename Event"), CLAY_TEXT_CONFIG({
+                CLAY_TEXT(titleText, CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_PRESS_START_2P,
                     .fontSize = 18,
                     .textColor = dashAccentOrange,
@@ -2881,8 +3090,13 @@ RenderRenameModal(void)
             }
 
             // Text input for new name
-            TextInput_Render(TEXTBOX_EventRename, CLAY_STRING("EventRenameInput"),
-                CLAY_STRING("EventRenameInputScroll"), CLAY_STRING("Enter new name..."));
+            if (renamingEvent) {
+                TextInput_Render(TEXTBOX_EventRename, CLAY_STRING("EventRenameInput"),
+                    CLAY_STRING("EventRenameInputScroll"), CLAY_STRING("Enter new name..."));
+            } else {
+                TextInput_Render(TEXTBOX_PlayerRename, CLAY_STRING("PlayerRenameInput"),
+                    CLAY_STRING("PlayerRenameInputScroll"), CLAY_STRING("Enter new name..."));
+            }
 
             // Buttons row
             CLAY(CLAY_ID("RenameButtonsRow"), {
@@ -2902,7 +3116,11 @@ RenderRenameModal(void)
                     .backgroundColor = Clay_Hovered() ? dashAccentTeal : addButtonColor,
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
-                    Clay_OnHover(HandleConfirmRenameEvent, 0);
+                    if (renamingEvent) {
+                        Clay_OnHover(HandleConfirmRenameEvent, 0);
+                    } else {
+                        Clay_OnHover(HandleConfirmRenamePlayer, 0);
+                    }
                     CLAY_TEXT(CLAY_STRING("OK"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 14,
@@ -2920,7 +3138,11 @@ RenderRenameModal(void)
                     .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
-                    Clay_OnHover(HandleCancelRenameEvent, 0);
+                    if (renamingEvent) {
+                        Clay_OnHover(HandleCancelRenameEvent, 0);
+                    } else {
+                        Clay_OnHover(HandleCancelRenamePlayer, 0);
+                    }
                     CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 14,

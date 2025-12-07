@@ -35,7 +35,8 @@ Page;
     X(TEXTBOX_NULL,        "",                    "")                     \
     X(TEXTBOX_Events,      "EventNameInput",      "EventNameInputScroll") \
     X(TEXTBOX_Players,     "PlayerNameInput",     "PlayerNameInputScroll")\
-    X(TEXTBOX_EventRename, "EventRenameInput",    "EventRenameInputScroll")
+    X(TEXTBOX_EventRename, "EventRenameInput",    "EventRenameInputScroll")\
+    X(TEXTBOX_PlayerRename,"PlayerRenameInput",   "PlayerRenameInputScroll")
 
 typedef enum TextBoxEnum
 {
@@ -94,6 +95,13 @@ struct ClayVideoDemo_Data {
 
     // Inline rename state for events (0 = not renaming)
     u32 renamingEventIdx;
+
+    // Confirmation dialog for deleting a player
+    bool showDeletePlayerConfirm;
+    u32 deletePlayerIdx;
+
+    // Inline rename state for players (0 = not renaming)
+    u32 renamingPlayerIdx;
 };
 
 typedef struct {

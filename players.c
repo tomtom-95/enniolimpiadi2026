@@ -137,6 +137,20 @@ entity_list_add(EntityList *entity_list, String8 name)
 }
 
 void
+entity_list_rename(EntityList *entity_list, u32 idx, String8 new_name)
+{
+    u32 idx_tail = entity_list->len + 1;
+
+    // Check if another active entity already has this name
+    u32 existing_idx = entity_list_find(entity_list, new_name);
+    assert(existing_idx == idx_tail || existing_idx == idx);
+
+    // No duplicate found, perform the rename
+    Entity *entity = entity_list->entities + idx;
+    entity->name = new_name;
+}
+
+void
 entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
 {
     u32 idx_tail = list1->len + 1;
