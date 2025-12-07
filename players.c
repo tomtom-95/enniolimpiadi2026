@@ -331,15 +331,12 @@ tournament_construct_groups(Entity *tournament)
         // Not enough players for one full group - put everyone in one group
         num_groups = 1;
         groups_with_extra = 0;
-        tournament->group_phase.group_size = num_players;
     }
     else
     {
         // Create complete groups and distribute remaining players among them
         num_groups = num_players / group_size;
         groups_with_extra = num_players % group_size;
-        // group_size is the max size any group can have (for iteration in rendering)
-        tournament->group_phase.group_size = group_size + (groups_with_extra > 0 ? 1 : 0);
     }
 
     tournament->group_phase.num_groups = num_groups;
