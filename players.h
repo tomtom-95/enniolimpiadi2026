@@ -103,6 +103,6 @@ void entity_list_register(EntityList *list1, EntityList *list2, String8 name1, S
 void entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
 
 void tournament_construct_bracket(EntityList *tournaments, String8 tournament_name);
-void tournament_construct_groups(Entity *tournament, u32 group_size);
+void tournament_construct_groups(Entity *tournament);
 
 #endif // PLAYERS_H

@@ -431,6 +431,34 @@ HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerD
     }
 }
 
+void
+HandleIncrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        if (tournament->group_phase.group_size < MAX_GROUP_SIZE)
+        {
+            tournament->group_phase.group_size++;
+        }
+    }
+}
+
+void
+HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        if (tournament->group_phase.group_size > 2)
+        {
+            tournament->group_phase.group_size--;
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Texbox functions
 
@@ -1020,6 +1048,79 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
             .fontSize = 14,
             .textColor = COLOR_WHITE
         }));
+    }
+
+    // Group size selector (only for groups format)
+    if (tournament->format == FORMAT_GROUPS_THEN_BRACKET)
+    {
+        CLAY(CLAY_ID("GroupSizeSelector"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 8, 8, 6, 6 },
+                .childGap = 8,
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = dashCardBg,
+            .cornerRadius = CLAY_CORNER_RADIUS(8),
+            .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+        }) {
+            // Decrement button
+            CLAY(CLAY_ID("GroupSizeDecrement"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIXED(28), .height = CLAY_SIZING_FIXED(28)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+                .cornerRadius = CLAY_CORNER_RADIUS(4)
+            }) {
+                Clay_OnHover(HandleDecrementGroupSize, 0);
+                CLAY_TEXT(CLAY_STRING("-"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 18,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+
+            // Group size label and value
+            CLAY(CLAY_ID("GroupSizeValue"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .childGap = 4,
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                }
+            }) {
+                CLAY_TEXT(CLAY_STRING("Group size:"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 12,
+                    .textColor = dashLabelText
+                }));
+                String8 size_str = str8_u32(data.frameArena, tournament->group_phase.group_size);
+                CLAY_TEXT(str8_to_clay(size_str), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 14,
+                    .textColor = stringColor
+                }));
+            }
+
+            // Increment button
+            CLAY(CLAY_ID("GroupSizeIncrement"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIXED(28), .height = CLAY_SIZING_FIXED(28)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+                .cornerRadius = CLAY_CORNER_RADIUS(4)
+            }) {
+                Clay_OnHover(HandleIncrementGroupSize, 0);
+                CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 18,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+        }
     }
 
     // Show "Start Tournament" button if we have enough players
@@ -1675,13 +1776,10 @@ RenderGroupsChart(Entity *tournament)
     // Only reconstruct groups during registration phase
     if (tournament->state == TOURNAMENT_REGISTRATION)
     {
-        // Default group size of 4
-        // TODO: the function is bugged with group size 4 and 7 players registered
-        tournament_construct_groups(tournament, 4);
+        tournament_construct_groups(tournament);
     }
 
     // Get group info from the constructed group phase
-    u32 group_size = tournament->group_phase.group_size;
     u32 num_groups = tournament->group_phase.num_groups;
 
     // Cycle through accent colors for each group
@@ -1728,7 +1826,7 @@ RenderGroupsChart(Entity *tournament)
                 {
                     // Count actual players in this group
                     u32 players_in_group = 0;
-                    for (u32 slot = 0; slot < group_size; slot++)
+                    for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
                     {
                         if (tournament->group_phase.groups[g][slot] != 0)
                         {

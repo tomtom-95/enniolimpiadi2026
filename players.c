@@ -130,6 +130,9 @@ entity_list_add(EntityList *entity_list, String8 name)
     // Player entity is not registered to anything
     entity->registrations = 0;
 
+    // Default group size for tournaments
+    entity->group_phase.group_size = 4;
+
     return first_free_idx;
 }
 
@@ -285,7 +288,7 @@ tournament_construct_bracket(EntityList *tournaments, String8 tournament_name)
 }
 
 void
-tournament_construct_groups(Entity *tournament, u32 group_size)
+tournament_construct_groups(Entity *tournament)
 {
     s32 positions[64];
     u32 num_players = find_all_filled_slots(tournament->registrations, positions);
@@ -295,45 +298,62 @@ tournament_construct_groups(Entity *tournament, u32 group_size)
         return;
     }
 
+    // Save desired group size before clearing
+    u32 group_size = tournament->group_phase.group_size;
+
     // Clear the group phase data
     MemoryZeroStruct(&tournament->group_phase);
 
-    // Calculate number of complete groups and distribute remaining players
-    u32 num_groups;
-    u32 groups_with_extra;  // Number of groups that get +1 player
+    // Restore desired group size
+    tournament->group_phase.group_size = group_size;
 
-    if (num_players < group_size)
+    // Find optimal number of groups that minimizes total distance from group_size
+    // When tied, prefer fewer groups
+    u32 best_num_groups = 1;
+    u32 best_total_distance = (num_players > group_size)
+        ? (num_players - group_size)
+        : (group_size - num_players);
+
+    u32 k_start = (num_players / group_size > 1) ? (num_players / group_size - 1) : 1;
+    u32 k_end = (num_players + group_size - 1) / group_size + 1;
+
+    for (u32 k = k_start; k <= k_end && k <= num_players; k++)
     {
-        // Not enough players for one full group - put everyone in one group
-        num_groups = 1;
-        groups_with_extra = 0;
-        tournament->group_phase.group_size = num_players;
+        u32 base_size = num_players / k;
+        u32 remainder = num_players % k;
+        u32 larger_size = base_size + (remainder > 0 ? 1 : 0);
+        u32 smaller_size = base_size;
+
+        u32 dist_larger = (larger_size > group_size)
+            ? (larger_size - group_size)
+            : (group_size - larger_size);
+        u32 dist_smaller = (smaller_size > group_size)
+            ? (smaller_size - group_size)
+            : (group_size - smaller_size);
+
+        // Total distance: remainder groups have larger_size, (k - remainder) have smaller_size
+        u32 total_distance = remainder * dist_larger + (k - remainder) * dist_smaller;
+
+        if (total_distance < best_total_distance)
+        {
+            best_total_distance = total_distance;
+            best_num_groups = k;
+        }
     }
-    else
-    {
-        // Create complete groups and distribute remaining players among them
-        num_groups = num_players / group_size;
-        groups_with_extra = num_players % group_size;
-        // group_size is the max size any group can have (for iteration in rendering)
-        tournament->group_phase.group_size = group_size + (groups_with_extra > 0 ? 1 : 0);
-    }
+
+    u32 num_groups = best_num_groups;
+    u32 base_size = num_players / num_groups;
+    u32 groups_with_extra = num_players % num_groups;
 
     tournament->group_phase.num_groups = num_groups;
+    // Keep group_size as the desired value (don't overwrite with computed max)
 
     // Assign players to groups
-    // First `groups_with_extra` groups have (group_size + 1) players
+    // First `groups_with_extra` groups have (base_size + 1) players
     u32 player_i = 0;
     for (u32 g = 0; g < num_groups; g++)
     {
-        u32 players_in_this_group;
-        if (num_players < group_size)
-        {
-            players_in_this_group = num_players;
-        }
-        else
-        {
-            players_in_this_group = group_size + (g < groups_with_extra ? 1 : 0);
-        }
+        u32 players_in_this_group = base_size + (g < groups_with_extra ? 1 : 0);
 
         for (u32 s = 0; s < players_in_this_group; s++)
         {
