@@ -24,6 +24,9 @@ main(void)
     Clay_Raylib_Initialize(1024, 768, "Introducing Clay Demo",
         FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
 
+    // Increased with respect to the default
+    Clay_SetMaxElementCount(16384);
+
     uint64_t clayRequiredMemory = Clay_MinMemorySize();
     Clay_Arena clayMemory = Clay_CreateArenaWithCapacityAndMemory(clayRequiredMemory, malloc(clayRequiredMemory));
 

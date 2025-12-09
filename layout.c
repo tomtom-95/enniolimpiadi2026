@@ -118,10 +118,10 @@ str8_to_clay_truncated(Arena *arena, String8 str, u64 max_len)
 // Event Handlers
 
 void
-HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
-    Page page = (Page)userData;
+    Page page = *(Page *)userData;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         data.selectedHeaderButton = page;
@@ -129,8 +129,9 @@ HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointer
 }
 
 void
-HandleGoBackInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleGoBackInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.selectedTournamentIdx = 0;
@@ -138,51 +139,53 @@ HandleGoBackInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, 
 }
 
 void
-HandleEditTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleEditTournament(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        u32 tournament_idx = (u32)userData;
+        u32 tournament_idx = *(u32 *)userData;
         data.selectedTournamentIdx = tournament_idx;
     }
 }
 
 void
-HandleDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        u32 tournament_idx = (u32)userData;
+        u32 tournament_idx = *(u32 *)userData;
         data.deleteTournamentIdx = tournament_idx;
         data.showDeleteTournamentConfirm = true;
     }
 }
 
 void
-HandleDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        u32 player_idx = (u32)userData;
+        u32 player_idx = *(u32 *)userData;
         data.deletePlayerIdx = player_idx;
         data.showDeletePlayerConfirm = true;
     }
 }
 
 void
-HandleOuterContainerInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleOuterContainerInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
         data.focusedTextbox = TEXTBOX_NULL;
     }
 }
 
 void
-HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     // Handle zoom with Cmd+/Cmd- while hovering over chart
     bool cmdPressed = IsKeyDown(KEY_LEFT_SUPER) || IsKeyDown(KEY_RIGHT_SUPER);
 
@@ -204,11 +207,12 @@ HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_
 }
 
 void
-HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_IBEAM;
 
-    TextBoxEnum textBoxEnum = (TextBoxEnum)userData;
+    TextBoxEnum *pTextBoxEnum = (TextBoxEnum *)userData;
+    TextBoxEnum textBoxEnum = *pTextBoxEnum;
 
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -262,8 +266,9 @@ HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t
 }
 
 void
-HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -276,8 +281,9 @@ HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData point
 }
 
 void
-HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -290,12 +296,12 @@ HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData poin
 }
 
 void
-HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        u32 player_idx = (u32)userData;
+        u32 player_idx = *(u32 *)userData;
         Entity *player = data.players.entities + player_idx;
         Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
 
@@ -314,13 +320,14 @@ HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointe
 }
 
 void
-HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
 
     // Decode userData: lower 8 bits = player_idx, upper bits = bracket_pos
-    u8 player_idx = (u8)(userData & 0xFF);
-    u32 bracket_pos = (u32)(userData >> 8);
+    intptr_t encoded = *(intptr_t *)userData;
+    u8 player_idx = (u8)(encoded & 0xFF);
+    u32 bracket_pos = (u32)(encoded >> 8);
 
     Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
 
@@ -353,8 +360,9 @@ HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, intp
 }
 
 void
-HandleStartTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleStartTournament(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -371,8 +379,9 @@ HandleStartTournament(Clay_ElementId elementId, Clay_PointerData pointerData, in
 }
 
 void
-HandleReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -381,8 +390,9 @@ HandleReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerDat
 }
 
 void
-HandleConfirmReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleConfirmReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -393,8 +403,9 @@ HandleConfirmReturnToRegistration(Clay_ElementId elementId, Clay_PointerData poi
 }
 
 void
-HandleCancelReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleCancelReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -403,8 +414,9 @@ HandleCancelReturnToRegistration(Clay_ElementId elementId, Clay_PointerData poin
 }
 
 void
-HandleConfirmDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleConfirmDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -416,8 +428,9 @@ HandleConfirmDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointer
 }
 
 void
-HandleCancelDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleCancelDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -427,8 +440,9 @@ HandleCancelDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointerD
 }
 
 void
-HandleConfirmDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleConfirmDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -440,8 +454,9 @@ HandleConfirmDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData
 }
 
 void
-HandleCancelDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleCancelDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -451,8 +466,9 @@ HandleCancelDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData,
 }
 
 void
-HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -470,12 +486,12 @@ HandleToggleTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerD
 }
 
 void
-HandleStartRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleStartRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        u32 event_idx = (u32)userData;
+        u32 event_idx = *(u32 *)userData;
         data.renamingEventIdx = event_idx;
         data.focusedTextbox = TEXTBOX_EventRename;
 
@@ -497,8 +513,9 @@ HandleStartRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, i
 }
 
 void
-HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -521,8 +538,9 @@ HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData,
 }
 
 void
-HandleCancelRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleCancelRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -532,12 +550,12 @@ HandleCancelRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, 
 }
 
 void
-HandleStartRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleStartRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        u32 player_idx = (u32)userData;
+        u32 player_idx = *(u32 *)userData;
         data.renamingPlayerIdx = player_idx;
         data.focusedTextbox = TEXTBOX_PlayerRename;
 
@@ -559,8 +577,9 @@ HandleStartRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, 
 }
 
 void
-HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -583,8 +602,9 @@ HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData
 }
 
 void
-HandleCancelRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleCancelRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -594,8 +614,9 @@ HandleCancelRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData,
 }
 
 void
-HandleIncrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleIncrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -608,8 +629,9 @@ HandleIncrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData,
 }
 
 void
-HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData)
+HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
+    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -775,7 +797,9 @@ TextInput_Render(TextBoxEnum textBoxEnum, Clay_String elementId,
         .cornerRadius = CLAY_CORNER_RADIUS(4),
         .border = { .width = {1, 1, 1, 1}, .color = inputBorderColor }
     }) {
-        Clay_OnHover(HandleTextInput, textBoxEnum);
+        TextBoxEnum *pTextBoxEnum = push_array(data.frameArena, TextBoxEnum, 1);
+        *pTextBoxEnum = textBoxEnum;
+        Clay_OnHover(HandleTextInput, pTextBoxEnum);
 
         // Inner container with scroll
         CLAY(Clay_GetElementId(scrollId), {
@@ -886,7 +910,9 @@ RenderHeaderButton(Clay_String text, Page page)
         .backgroundColor = Clay_Hovered() ? headerButtonHoverColor : headerButtonColor,
         .cornerRadius = CLAY_CORNER_RADIUS(5)
     }) {
-        Clay_OnHover(HandleHeaderButtonInteraction, (intptr_t)page);
+        Page *pPage = push_array(data.frameArena, Page, 1);
+        *pPage = page;
+        Clay_OnHover(HandleHeaderButtonInteraction, pPage);
         CLAY_TEXT(text, CLAY_TEXT_CONFIG({
             .fontId = FONT_ID_BODY_16,
             .fontSize = 24,
@@ -1231,7 +1257,7 @@ RenderGoBackButton(void)
             .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
             .cornerRadius = CLAY_CORNER_RADIUS(10)
         }) {
-            Clay_OnHover(HandleGoBackInteraction, 0);
+            Clay_OnHover(HandleGoBackInteraction, NULL);
             CLAY_TEXT(CLAY_STRING("< Go back"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
                 .fontSize = 14,
@@ -1280,7 +1306,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
         .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
         .cornerRadius = CLAY_CORNER_RADIUS(8)
     }) {
-        Clay_OnHover(HandleToggleTournamentFormat, 0);
+        Clay_OnHover(HandleToggleTournamentFormat, NULL);
         CLAY_TEXT(format_text, CLAY_TEXT_CONFIG({
             .fontId = FONT_ID_BODY_16,
             .fontSize = 14,
@@ -1312,7 +1338,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                 .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
                 .cornerRadius = CLAY_CORNER_RADIUS(4)
             }) {
-                Clay_OnHover(HandleDecrementGroupSize, 0);
+                Clay_OnHover(HandleDecrementGroupSize, NULL);
                 CLAY_TEXT(CLAY_STRING("-"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 18,
@@ -1351,7 +1377,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                 .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
                 .cornerRadius = CLAY_CORNER_RADIUS(4)
             }) {
-                Clay_OnHover(HandleIncrementGroupSize, 0);
+                Clay_OnHover(HandleIncrementGroupSize, NULL);
                 CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 18,
@@ -1373,7 +1399,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
             .backgroundColor = Clay_Hovered() ? dashAccentTeal : dashAccentCoral,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            Clay_OnHover(HandleStartTournament, 0);
+            Clay_OnHover(HandleStartTournament, NULL);
             CLAY_TEXT(CLAY_STRING("Start Tournament"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
                 .fontSize = 14,
@@ -1406,7 +1432,9 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                 .cornerRadius = CLAY_CORNER_RADIUS(4),
                 .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
             }) {
-                Clay_OnHover(HandleTogglePlayerRegistration, (intptr_t)player_idx);
+                u32 *pPlayerIdx = push_array(data.frameArena, u32, 1);
+                *pPlayerIdx = player_idx;
+                Clay_OnHover(HandleTogglePlayerRegistration, pPlayerIdx);
                 CLAY_TEXT(CLAY_STRING("-"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 16,
@@ -1449,7 +1477,9 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                     .cornerRadius = CLAY_CORNER_RADIUS(4),
                     .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
                 }) {
-                    Clay_OnHover(HandleTogglePlayerRegistration, (intptr_t)idx);
+                    u32 *pIdx = push_array(data.frameArena, u32, 1);
+                    *pIdx = idx;
+                    Clay_OnHover(HandleTogglePlayerRegistration, pIdx);
                     CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 16,
@@ -1489,7 +1519,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
         .backgroundColor = Clay_Hovered() ? dashAccentCoral : dashAccentPurple,
         .cornerRadius = CLAY_CORNER_RADIUS(8)
     }) {
-        Clay_OnHover(HandleReturnToRegistration, 0);
+        Clay_OnHover(HandleReturnToRegistration, NULL);
         CLAY_TEXT(CLAY_STRING("Return to Registration"), CLAY_TEXT_CONFIG({
             .fontId = FONT_ID_BODY_16,
             .fontSize = 14,
@@ -1544,8 +1574,10 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
     Clay_Color name2Color = player2_is_tbd ? matchVsColor : stringColor;
 
     // Encode data for click handlers: (bracket_pos << 8) | player_idx
-    intptr_t player1_data = (intptr_t)((bracket_pos1 << 8) | player1_idx);
-    intptr_t player2_data = (intptr_t)((bracket_pos2 << 8) | player2_idx);
+    intptr_t *pPlayer1Data = push_array(data.frameArena, intptr_t, 1);
+    *pPlayer1Data = (intptr_t)((bracket_pos1 << 8) | player1_idx);
+    intptr_t *pPlayer2Data = push_array(data.frameArena, intptr_t, 1);
+    *pPlayer2Data = (intptr_t)((bracket_pos2 << 8) | player2_idx);
 
     float slotWidth = 160 * zoom;
     float accentHeight = 4 * zoom;
@@ -1594,7 +1626,7 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
                 .cornerRadius = CLAY_CORNER_RADIUS(4 * zoom)
             }) {
                 if (!player1_is_tbd) {
-                    Clay_OnHover(HandleAdvanceWinner, player1_data);
+                    Clay_OnHover(HandleAdvanceWinner, pPlayer1Data);
                 }
                 CLAY_TEXT(player1_name, CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
@@ -1646,7 +1678,7 @@ RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
                 .cornerRadius = CLAY_CORNER_RADIUS(4 * zoom)
             }) {
                 if (!player2_is_tbd) {
-                    Clay_OnHover(HandleAdvanceWinner, player2_data);
+                    Clay_OnHover(HandleAdvanceWinner, pPlayer2Data);
                 }
                 CLAY_TEXT(player2_name, CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
@@ -2211,7 +2243,7 @@ RenderTournamentRightPanel(u32 tournament_idx)
             .cornerRadius = { 0, 0, 12, 12 },
             .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
-            Clay_OnHover(HandleChartHover, 0);
+            Clay_OnHover(HandleChartHover, NULL);
             Entity *tournament = data.tournaments.entities + tournament_idx;
 
             // Get the number of players in the tournament
@@ -2281,6 +2313,9 @@ RenderTournamentChart(u32 tournament_idx)
 void
 RenderEventsActions(u32 tournament_idx)
 {
+    u32 *pTournamentIdx = push_array(data.frameArena, u32, 1);
+    *pTournamentIdx = tournament_idx;
+
     CLAY(CLAY_IDI("EventActions", tournament_idx), {
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
@@ -2298,7 +2333,7 @@ RenderEventsActions(u32 tournament_idx)
             .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            Clay_OnHover(HandleEditTournament, (intptr_t)tournament_idx);
+            Clay_OnHover(HandleEditTournament, pTournamentIdx);
 
             CLAY_TEXT(CLAY_STRING("Open"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
@@ -2316,7 +2351,7 @@ RenderEventsActions(u32 tournament_idx)
             .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentOrange,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            Clay_OnHover(HandleStartRenameEvent, (intptr_t)tournament_idx);
+            Clay_OnHover(HandleStartRenameEvent, pTournamentIdx);
 
             CLAY_TEXT(CLAY_STRING("Rename"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
@@ -2334,7 +2369,7 @@ RenderEventsActions(u32 tournament_idx)
             .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : removeButtonColor,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            Clay_OnHover(HandleDeleteTournament, (intptr_t)tournament_idx);
+            Clay_OnHover(HandleDeleteTournament, pTournamentIdx);
 
             CLAY_TEXT(CLAY_STRING("Delete"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
@@ -2416,7 +2451,7 @@ RenderEventsHeader(void)
                 .backgroundColor = Clay_Hovered() ? dashAccentTeal : dashAccentCoral,
                 .cornerRadius = CLAY_CORNER_RADIUS(10)
             }) {
-                Clay_OnHover(HandleAddEventButtonInteraction, 0);
+                Clay_OnHover(HandleAddEventButtonInteraction, NULL);
                 CLAY_TEXT(CLAY_STRING("+ Add Event"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 16,
@@ -2589,6 +2624,9 @@ RenderEvents(void)
 void
 RenderPlayersActions(u32 player_idx)
 {
+    u32 *pPlayerIdx = push_array(data.frameArena, u32, 1);
+    *pPlayerIdx = player_idx;
+
     CLAY(CLAY_IDI("PlayerActions", player_idx), {
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
@@ -2622,7 +2660,7 @@ RenderPlayersActions(u32 player_idx)
             .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentOrange,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            Clay_OnHover(HandleStartRenamePlayer, (intptr_t)player_idx);
+            Clay_OnHover(HandleStartRenamePlayer, pPlayerIdx);
 
             CLAY_TEXT(CLAY_STRING("Rename"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
@@ -2640,7 +2678,7 @@ RenderPlayersActions(u32 player_idx)
             .backgroundColor = Clay_Hovered() ? removeButtonHoverColor : removeButtonColor,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            Clay_OnHover(HandleDeletePlayer, (intptr_t)player_idx);
+            Clay_OnHover(HandleDeletePlayer, pPlayerIdx);
 
             CLAY_TEXT(CLAY_STRING("Delete"), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
@@ -2722,7 +2760,7 @@ RenderPlayersHeader(void)
                 .backgroundColor = Clay_Hovered() ? dashAccentTeal : dashAccentCoral,
                 .cornerRadius = CLAY_CORNER_RADIUS(10)
             }) {
-                Clay_OnHover(HandleAddPlayerButtonInteraction, 0);
+                Clay_OnHover(HandleAddPlayerButtonInteraction, NULL);
                 CLAY_TEXT(CLAY_STRING("+ Add Player"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
                     .fontSize = 16,
@@ -3040,11 +3078,11 @@ RenderConfirmationModal(void)
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
                     if (showDeleteTournamentModal) {
-                        Clay_OnHover(HandleConfirmDeleteTournament, 0);
+                        Clay_OnHover(HandleConfirmDeleteTournament, NULL);
                     } else if (showDeletePlayerModal) {
-                        Clay_OnHover(HandleConfirmDeletePlayer, 0);
+                        Clay_OnHover(HandleConfirmDeletePlayer, NULL);
                     } else {
-                        Clay_OnHover(HandleConfirmReturnToRegistration, 0);
+                        Clay_OnHover(HandleConfirmReturnToRegistration, NULL);
                     }
                     CLAY_TEXT(confirmText, CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
@@ -3064,11 +3102,11 @@ RenderConfirmationModal(void)
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
                     if (showDeleteTournamentModal) {
-                        Clay_OnHover(HandleCancelDeleteTournament, 0);
+                        Clay_OnHover(HandleCancelDeleteTournament, NULL);
                     } else if (showDeletePlayerModal) {
-                        Clay_OnHover(HandleCancelDeletePlayer, 0);
+                        Clay_OnHover(HandleCancelDeletePlayer, NULL);
                     } else {
-                        Clay_OnHover(HandleCancelReturnToRegistration, 0);
+                        Clay_OnHover(HandleCancelReturnToRegistration, NULL);
                     }
                     CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
@@ -3197,9 +3235,9 @@ RenderRenameModal(void)
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
                     if (renamingEvent) {
-                        Clay_OnHover(HandleConfirmRenameEvent, 0);
+                        Clay_OnHover(HandleConfirmRenameEvent, NULL);
                     } else {
-                        Clay_OnHover(HandleConfirmRenamePlayer, 0);
+                        Clay_OnHover(HandleConfirmRenamePlayer, NULL);
                     }
                     CLAY_TEXT(CLAY_STRING("OK"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
@@ -3219,9 +3257,9 @@ RenderRenameModal(void)
                     .cornerRadius = CLAY_CORNER_RADIUS(8)
                 }) {
                     if (renamingEvent) {
-                        Clay_OnHover(HandleCancelRenameEvent, 0);
+                        Clay_OnHover(HandleCancelRenameEvent, NULL);
                     } else {
-                        Clay_OnHover(HandleCancelRenamePlayer, 0);
+                        Clay_OnHover(HandleCancelRenamePlayer, NULL);
                     }
                     CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
@@ -3250,7 +3288,7 @@ CreateLayout(void)
             .childGap = 16
         }
     }) {
-        Clay_OnHover(HandleOuterContainerInteraction, 0);
+        Clay_OnHover(HandleOuterContainerInteraction, NULL);
 
         CLAY(CLAY_ID("HeaderBar"), {
             .layout = {
