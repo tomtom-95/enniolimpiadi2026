@@ -41,9 +41,9 @@ main(void)
     SetTextureFilter(fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
     Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
-    Clay_SetDebugModeEnabled(true);
+    Clay_SetDebugModeEnabled(false);
 
-    Arena *arena = arena_alloc(MegaByte(1));
+    Arena *arena = arena_alloc(MegaByte(10));
 
     EntityList players = entity_list_init(arena, 64);
     EntityList tournaments = entity_list_init(arena, 64);

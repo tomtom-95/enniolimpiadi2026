@@ -318,6 +318,12 @@ tournament_construct_groups(Entity *tournament)
     // Clear the group phase data
     MemoryZeroStruct(&tournament->group_phase);
 
+    // Initialize player_group to GROUP_NONE (since 0 is now a valid group index)
+    for (u32 i = 0; i <= MAX_NUM_ENTITIES; i++)
+    {
+        tournament->group_phase.player_group[i] = GROUP_NONE;
+    }
+
     // Restore desired group size
     tournament->group_phase.group_size = group_size;
 
@@ -360,7 +366,7 @@ tournament_construct_groups(Entity *tournament)
         {
             u32 global_idx = BIT_TO_ENTITY_IDX(positions[player_i]);
             tournament->group_phase.groups[g][s] = global_idx;
-            tournament->group_phase.player_group[global_idx] = g + 1;
+            tournament->group_phase.player_group[global_idx] = g;  // 0-based group index
             tournament->group_phase.player_slot[global_idx] = s;
             player_i++;
         }

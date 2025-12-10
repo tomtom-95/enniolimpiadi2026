@@ -36,7 +36,9 @@ Page;
     X(TEXTBOX_Events,      "EventNameInput",      "EventNameInputScroll")    \
     X(TEXTBOX_Players,     "PlayerNameInput",     "PlayerNameInputScroll")   \
     X(TEXTBOX_EventRename, "EventRenameInput",    "EventRenameInputScroll")  \
-    X(TEXTBOX_PlayerRename,"PlayerRenameInput",   "PlayerRenameInputScroll")
+    X(TEXTBOX_PlayerRename,"PlayerRenameInput",   "PlayerRenameInputScroll") \
+    X(TEXTBOX_Score1,      "Score1Input",         "Score1InputScroll")       \
+    X(TEXTBOX_Score2,      "Score2Input",         "Score2InputScroll")
 
 typedef enum TextBoxEnum
 {
@@ -102,6 +104,16 @@ struct ClayVideoDemo_Data {
 
     // Inline rename state for players (0 = not renaming)
     u32 renamingPlayerIdx;
+
+    // Score registration modal state
+    bool showScoreModal;
+    u32 scoreModalGroupIdx;
+    u32 scoreModalRowIdx;   // row player slot index
+    u32 scoreModalColIdx;   // column player slot index
+
+    // Double-click tracking
+    double lastClickTime;
+    u32 lastClickCellId;
 };
 
 typedef struct {

@@ -643,6 +643,136 @@ HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData,
     }
 }
 
+typedef struct {
+    u32 group_idx;
+    u32 row_idx;
+    u32 col_idx;
+    u32 cell_id;
+} MatrixCellData;
+
+#define DOUBLE_CLICK_THRESHOLD 0.3  // 300ms for double-click
+
+void
+HandleMatrixCellClick(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    (void)elementId;
+    MatrixCellData *cellData = (MatrixCellData *)userData;
+
+    // Only allow score entry when tournament is in progress
+    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+    if (tournament->state != TOURNAMENT_IN_PROGRESS)
+    {
+        return;
+    }
+
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        double currentTime = GetTime();
+
+        // Check for double-click on the same cell
+        if (data.lastClickCellId == cellData->cell_id &&
+            (currentTime - data.lastClickTime) < DOUBLE_CLICK_THRESHOLD)
+        {
+            // Double-click detected - open score modal
+            data.showScoreModal = true;
+            data.scoreModalGroupIdx = cellData->group_idx;
+            data.scoreModalRowIdx = cellData->row_idx;
+            data.scoreModalColIdx = cellData->col_idx;
+
+            // Clear score input textboxes
+            data.textInputs[TEXTBOX_Score1].buffer[0] = '\0';
+            data.textInputs[TEXTBOX_Score1].len = 0;
+            data.textInputs[TEXTBOX_Score1].cursorPos = 0;
+            data.textInputs[TEXTBOX_Score2].buffer[0] = '\0';
+            data.textInputs[TEXTBOX_Score2].len = 0;
+            data.textInputs[TEXTBOX_Score2].cursorPos = 0;
+
+            // Focus the first textbox
+            data.focusedTextbox = TEXTBOX_Score1;
+
+            // Reset to prevent triple-click triggering again
+            data.lastClickTime = 0;
+            data.lastClickCellId = 0;
+        }
+        else
+        {
+            // First click - record time and cell
+            data.lastClickTime = currentTime;
+            data.lastClickCellId = cellData->cell_id;
+        }
+    }
+}
+
+void
+HandleCancelScoreModal(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    (void)elementId;
+    (void)userData;
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        data.showScoreModal = false;
+        data.focusedTextbox = TEXTBOX_NULL;
+    }
+}
+
+void
+HandleConfirmScoreModal(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    (void)elementId;
+    (void)userData;
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        // Parse scores from textboxes
+        TextInput *input1 = &data.textInputs[TEXTBOX_Score1];
+        TextInput *input2 = &data.textInputs[TEXTBOX_Score2];
+
+        u16 score1 = 0;
+        u16 score2 = 0;
+
+        // Parse score 1 (simple atoi-style)
+        for (u32 i = 0; i < input1->len; i++)
+        {
+            char c = input1->buffer[i];
+            if (c >= '0' && c <= '9')
+            {
+                score1 = score1 * 10 + (c - '0');
+            }
+        }
+
+        // Parse score 2
+        for (u32 i = 0; i < input2->len; i++)
+        {
+            char c = input2->buffer[i];
+            if (c >= '0' && c <= '9')
+            {
+                score2 = score2 * 10 + (c - '0');
+            }
+        }
+
+        // Save to the tournament's group phase
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        u32 g = data.scoreModalGroupIdx;
+        u32 row = data.scoreModalRowIdx;
+        u32 col = data.scoreModalColIdx;
+
+        // Store the score for this match
+        tournament->group_phase.scores[g][row][col].row_score = score1;
+        tournament->group_phase.scores[g][row][col].col_score = score2;
+
+        // Also store the mirror entry (col vs row) with swapped scores
+        tournament->group_phase.scores[g][col][row].row_score = score2;
+        tournament->group_phase.scores[g][col][row].col_score = score1;
+
+        // Close the modal
+        data.showScoreModal = false;
+        data.focusedTextbox = TEXTBOX_NULL;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Texbox functions
 
@@ -2000,7 +2130,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                         {
                             u32 cell_id = group_idx * MAX_GROUP_SIZE * MAX_GROUP_SIZE + row * MAX_GROUP_SIZE + col;
                             bool isDiagonal = (row == col);
-                            Clay_Color cell_bg = isDiagonal ? textInputBorderColor : (row % 2 == 0) ? dashCardBg : dashBgGradientTop;
+                            Clay_Color cell_bg_normal = isDiagonal ? textInputBorderColor : (row % 2 == 0) ? dashCardBg : dashBgGradientTop;
                             bool isLastCol = (col == players_in_group - 1);
 
                             CLAY(CLAY_IDI("MatrixCell", cell_id), {
@@ -2010,7 +2140,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                                 },
                                 .border = { .width = {1, 0, 0, 0}, .color = textInputBorderColor },
-                                .backgroundColor = cell_bg,
+                                .backgroundColor = (!isDiagonal && Clay_Hovered()) ? dashAccentTeal : cell_bg_normal,
                                 .cornerRadius = (isLastRow && isLastCol) ? (Clay_CornerRadius){ 0, 0, 8, 0 } : (Clay_CornerRadius){ 0, 0, 0, 0 }
                             }) {
                                 // Diagonal cells (player vs self) show dash
@@ -2024,12 +2154,41 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                                 }
                                 else
                                 {
-                                    // Other cells will show match results (empty for now)
-                                    CLAY_TEXT(CLAY_STRING("TBD"), CLAY_TEXT_CONFIG({
-                                        .fontId = FONT_ID_BODY_16,
-                                        .fontSize = 14,
-                                        .textColor = dashAccentPurple
-                                    }));
+                                    // Register double-click handler for score entry
+                                    MatrixCellData *pCellData = push_array(data.frameArena, MatrixCellData, 1);
+                                    pCellData->group_idx = group_idx;
+                                    pCellData->row_idx = row;
+                                    pCellData->col_idx = col;
+                                    pCellData->cell_id = cell_id;
+                                    Clay_OnHover(HandleMatrixCellClick, pCellData);
+
+                                    // Get the score for this cell
+                                    MatchScore score = tournament->group_phase.scores[group_idx][row][col];
+                                    bool hasScore = (score.row_score != 0 || score.col_score != 0);
+
+                                    if (hasScore)
+                                    {
+                                        // Display score as "X - Y"
+                                        String8 str8_row_score = str8_u32(data.frameArena, (u32)score.row_score);
+                                        String8 str8_col_score = str8_u32(data.frameArena, (u32)score.col_score);
+                                        String8 separator = str8_lit_comp(" - ");
+                                        String8 res = str8_cat(data.frameArena, str8_cat(data.frameArena, str8_row_score, separator), str8_col_score);
+                                        // String8 test = str8_lit_comp("1-1");
+                                        CLAY_TEXT(str8_to_clay(res), CLAY_TEXT_CONFIG({
+                                            .fontId = FONT_ID_BODY_16,
+                                            .fontSize = 14,
+                                            .textColor = Clay_Hovered() ? COLOR_WHITE : dashAccentTeal
+                                        }));
+                                    }
+                                    else
+                                    {
+                                        // No score yet - show TBD
+                                        CLAY_TEXT(CLAY_STRING("TBD"), CLAY_TEXT_CONFIG({
+                                            .fontId = FONT_ID_BODY_16,
+                                            .fontSize = 14,
+                                            .textColor = Clay_Hovered() ? COLOR_WHITE : dashAccentPurple
+                                        }));
+                                    }
                                 }
                             }
                         }
@@ -2071,7 +2230,7 @@ RenderGroupsChart(Entity *tournament)
     CLAY(CLAY_ID("GroupsContainer"), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
             .childGap = 24,
             .padding = { 16, 16, 16, 16 }
         }
@@ -2082,9 +2241,9 @@ RenderGroupsChart(Entity *tournament)
             CLAY(CLAY_IDI("GroupRow", row), {
                 .layout = {
                     .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                    .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
                     .childGap = 24,
-                    .childAlignment = { .y = CLAY_ALIGN_Y_TOP }
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_TOP }
                 }
             }) {
                 // Groups in this row
@@ -3272,6 +3431,223 @@ RenderRenameModal(void)
     }
 }
 
+void
+RenderRegisterScoreModal(void)
+{
+    if (!data.showScoreModal) return;
+
+    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+    u8 row_player_idx = tournament->group_phase.groups[data.scoreModalGroupIdx][data.scoreModalRowIdx];
+    u8 col_player_idx = tournament->group_phase.groups[data.scoreModalGroupIdx][data.scoreModalColIdx];
+
+    Entity *row_player = data.players.entities + row_player_idx;
+    Entity *col_player = data.players.entities + col_player_idx;
+
+    // Process keyboard input for score textboxes
+    if (data.focusedTextbox == TEXTBOX_Score1)
+    {
+        TextInput_ProcessKeyboard(&data.textInputs[TEXTBOX_Score1]);
+    }
+    else if (data.focusedTextbox == TEXTBOX_Score2)
+    {
+        TextInput_ProcessKeyboard(&data.textInputs[TEXTBOX_Score2]);
+    }
+
+    // Full-screen overlay that blocks all interactions
+    CLAY(CLAY_ID("ScoreModalOverlay"), {
+        .layout = {
+            .sizing = layoutExpand,
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        },
+        .backgroundColor = modalOverlayColor,
+        .floating = {
+            .attachTo = CLAY_ATTACH_TO_ROOT,
+            .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
+            .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_CAPTURE
+        }
+    }) {
+        // Score dialog box
+        CLAY(CLAY_ID("ScoreDialog"), {
+            .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 24, 24, 20, 20 },
+                .childGap = 16,
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+            },
+            .backgroundColor = dashCardBg,
+            .cornerRadius = CLAY_CORNER_RADIUS(12),
+            .border = { .width = {3, 3, 3, 3}, .color = dashAccentTeal }
+        }) {
+            // Title row
+            CLAY(CLAY_ID("ScoreTitleRow"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                }
+            }) {
+                CLAY_TEXT(CLAY_STRING("Register Score"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 18,
+                    .textColor = dashAccentTeal,
+                    .wrapMode = CLAY_TEXT_WRAP_NONE
+                }));
+            }
+
+            // Match info badge (Group X)
+            String8 group_prefix = str8_lit("GROUP ");
+            String8 group_num = str8_u32(data.frameArena, data.scoreModalGroupIdx + 1);
+            String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
+            CLAY(CLAY_ID("ScoreGroupBadge"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                    .padding = { 12, 12, 6, 6 },
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                },
+                .backgroundColor = dashAccentPurple,
+                .cornerRadius = CLAY_CORNER_RADIUS(6)
+            }) {
+                CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+
+            // Player scores input section
+            CLAY(CLAY_ID("ScoreInputsContainer"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                    .childGap = 16,
+                    .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
+                }
+            }) {
+                // Player 1 (row player)
+                CLAY(CLAY_ID("Score1Container"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    }
+                }) {
+                    // Player 1 name
+                    CLAY(CLAY_ID("Score1NameBadge"), {
+                        .layout = {
+                            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                            .padding = { 10, 10, 6, 6 },
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                        },
+                        .backgroundColor = dashAccentOrange,
+                        .cornerRadius = CLAY_CORNER_RADIUS(6)
+                    }) {
+                        CLAY_TEXT(str8_to_clay_truncated(data.frameArena, row_player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 14,
+                            .textColor = COLOR_WHITE
+                        }));
+                    }
+
+                    // Score 1 textbox
+                    TextInput_Render(TEXTBOX_Score1, CLAY_STRING("Score1Input"),
+                        CLAY_STRING("Score1InputScroll"), CLAY_STRING("0"));
+                }
+
+                // VS text
+                CLAY(CLAY_ID("ScoreVsText"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 0, 0 }
+                    }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("vs"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_PRESS_START_2P,
+                        .fontSize = 14,
+                        .textColor = matchVsColor
+                    }));
+                }
+
+                // Player 2 (col player)
+                CLAY(CLAY_ID("Score2Container"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                        .childGap = 8,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    }
+                }) {
+                    // Player 2 name
+                    CLAY(CLAY_ID("Score2NameBadge"), {
+                        .layout = {
+                            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                            .padding = { 10, 10, 6, 6 },
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                        },
+                        .backgroundColor = dashAccentCoral,
+                        .cornerRadius = CLAY_CORNER_RADIUS(6)
+                    }) {
+                        CLAY_TEXT(str8_to_clay_truncated(data.frameArena, col_player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 14,
+                            .textColor = COLOR_WHITE
+                        }));
+                    }
+
+                    // Score 2 textbox
+                    TextInput_Render(TEXTBOX_Score2, CLAY_STRING("Score2Input"),
+                        CLAY_STRING("Score2InputScroll"), CLAY_STRING("0"));
+                }
+            }
+
+            // Buttons row
+            CLAY(CLAY_ID("ScoreButtonsRow"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .childGap = 16
+                }
+            }) {
+                // OK button
+                CLAY(CLAY_ID("ScoreOkButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 16, 16, 10, 10 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? dashAccentTeal : addButtonColor,
+                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                }) {
+                    Clay_OnHover(HandleConfirmScoreModal, NULL);
+                    CLAY_TEXT(CLAY_STRING("Save"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+
+                // Cancel button
+                CLAY(CLAY_ID("ScoreCancelButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 16, 16, 10, 10 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentTeal,
+                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                }) {
+                    Clay_OnHover(HandleCancelScoreModal, NULL);
+                    CLAY_TEXT(CLAY_STRING("Cancel"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 14,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+        }
+    }
+}
+
 Clay_RenderCommandArray
 CreateLayout(void)
 {
@@ -3331,6 +3707,7 @@ CreateLayout(void)
         // Render modal overlays (floating, rendered last so they appear on top)
         RenderConfirmationModal();
         RenderRenameModal();
+        RenderRegisterScoreModal();
     }
 
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();

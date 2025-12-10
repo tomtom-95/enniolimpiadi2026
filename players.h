@@ -13,6 +13,7 @@
 
 #define MAX_GROUPS 16
 #define MAX_GROUP_SIZE 8
+#define GROUP_NONE 0xFF  // Sentinel for "player not assigned to any group"
 
 #define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
 #define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
@@ -42,8 +43,8 @@ typedef enum MatchResult {
 } MatchResult;
 
 typedef struct MatchScore {
-    u8 row_score;  // Score of the row player
-    u8 col_score;  // Score of the column player
+    u16 row_score;  // Score of the row player
+    u16 col_score;  // Score of the column player
 } MatchScore;
 
 // TODO: really understand how group phase is populated
@@ -57,9 +58,9 @@ typedef struct GroupPhase {
     u8 groups[MAX_GROUPS][MAX_GROUP_SIZE];
 
     // Reverse: given global player idx, get (group, local position)
-    // player_group[global_idx] = group number (0 = not in any group)
+    // player_group[global_idx] = group index (GROUP_NONE = not in any group)
     // player_slot[global_idx] = local position within that group
-    u8 player_group[MAX_NUM_ENTITIES + 1];  // +1 because indices are 1-based
+    u8 player_group[MAX_NUM_ENTITIES + 1];  // +1 because entity indices are 1-based
     u8 player_slot[MAX_NUM_ENTITIES + 1];
 
     // Results matrix (uses local indices)
