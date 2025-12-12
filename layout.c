@@ -2421,8 +2421,14 @@ RenderTournamentRightPanel(u32 tournament_idx)
                 bracketConnectionsElement.customData.bracketConnections.zoom = data.chartZoomLevel;
                 bracketConnectionsElement.customData.bracketConnections.yOffset = data.yOffset;
 
+                // Use floating element so it doesn't move with childOffset/scroll
+                // This prevents Clay from culling it when the bracket is panned
                 CLAY(CLAY_ID("BracketConnections"), {
-                    .layout = { .sizing = { .width = CLAY_SIZING_FIXED(0), .height = CLAY_SIZING_FIXED(0) } },
+                    .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) } },
+                    .floating = {
+                        .attachTo = CLAY_ATTACH_TO_PARENT,
+                        .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_PASSTHROUGH
+                    },
                     .custom = { .customData = &bracketConnectionsElement }
                 }) {}
             }

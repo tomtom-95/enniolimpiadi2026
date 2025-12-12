@@ -263,28 +263,14 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                             num_rounds++;
                         }
 
-                        // Get the TournamentChart bounding box for clipping
-                        Clay_ElementData chartData = Clay_GetElementData(
-                            Clay_GetElementId(CLAY_STRING("TournamentChart")));
-
-                        assert(chartData.found);
-
-                        // if (!chartData.found) break;
-
-                        Clay_BoundingBox chartBox = chartData.boundingBox;
-                        chartBox.y += yOffset;
-
-                        // Enable scissor mode to clip curves to the chart area
-                        BeginScissorMode(
-                            (int)chartBox.x,
-                            (int)chartBox.y,
-                            (int)chartBox.width,
-                            (int)chartBox.height
-                        );
-
                         // Line color and thickness (Teal to match theme)
                         Color lineColor = { 72, 219, 195, 255 };
                         float thickness = 2.0f;
+
+                        Clay_ElementData bracketElementData = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("BracketConnections")));
+                        Clay_BoundingBox boundingBox = bracketElementData.boundingBox;
+
+                        BeginScissorMode(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
 
                         // Draw connections for each round after the first
                         for (uint32_t round = 1; round < num_rounds; round++)
@@ -349,8 +335,8 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                                 DrawSplineSegmentBezierCubic(start2, ctrl2_1, ctrl2_2, end, thickness, lineColor);
                             }
                         }
-
                         EndScissorMode();
+
                         break;
                     }
                     default: break;

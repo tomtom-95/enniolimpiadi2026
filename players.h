@@ -9,7 +9,7 @@
 // I do not want anymore to look at code and wonder why and how and if it works!
 
 #define MAX_NUM_ENTITIES 64
-#define BRACKET_SIZE 127  // 64 + 32 + 16 + 8 + 4 + 2 + 1
+#define BRACKET_SIZE 127
 
 #define MAX_GROUPS 16
 #define MAX_GROUP_SIZE 8
