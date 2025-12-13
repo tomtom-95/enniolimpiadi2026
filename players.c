@@ -130,8 +130,9 @@ entity_list_add(EntityList *entity_list, String8 name)
     // Player entity is not registered to anything
     entity->registrations = 0;
 
-    // Default group size for tournaments
+    // Default group size and advance count for tournaments
     entity->group_phase.group_size = 4;
+    entity->group_phase.advance_per_group = 2;
 
     return first_free_idx;
 }
@@ -164,8 +165,14 @@ entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
     u32 count = find_all_filled_slots((list1->entities + idx)->registrations, positions);
     for (u32 i = 0; i < count; ++i)
     {
+        Entity *entity2 = list2->entities + positions[i] + 1;
+
         // Set a bit at position (idx - 1) to 0
-        (list2->entities + positions[i] + 1)->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx));
+        entity2->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx));
+
+        // Update data relative of tournament distribution of players
+        tournament_construct_groups(entity2);
+        tournament_construct_bracket(entity2);
     }
 
     (list1->entities + entity->prv)->nxt = entity->nxt;
@@ -176,8 +183,7 @@ entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
 }
 
 void
-entity_list_register(EntityList *list1, EntityList *list2,
-    String8 name1, String8 name2)
+entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String8 name2)
 {
     u32 idx_tail1 = list1->len + 1;
     u32 idx_tail2 = list2->len + 1;
@@ -188,14 +194,20 @@ entity_list_register(EntityList *list1, EntityList *list2,
     u32 idx2 = entity_list_find(list2, name2);
     assert(idx2 != idx_tail2);
 
+    Entity *entity1 = list1->entities + idx1;
+    Entity *entity2 = list2->entities + idx2;
+
     // Set registration bits
-    (list1->entities + idx1)->registrations |= (1ULL << ENTITY_IDX_TO_BIT(idx2));
-    (list2->entities + idx2)->registrations |= (1ULL << ENTITY_IDX_TO_BIT(idx1));
+    entity1->registrations |= (1ULL << ENTITY_IDX_TO_BIT(idx2));
+    entity2->registrations |= (1ULL << ENTITY_IDX_TO_BIT(idx1));
+
+    // Update data relative of tournament distribution of players
+    tournament_construct_groups(entity2);
+    tournament_construct_bracket(entity2);
 }
 
 void
-entity_list_unregister(EntityList *list1, EntityList *list2,
-    String8 name1, String8 name2)
+entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2)
 {
     u32 idx_tail1 = list1->len + 1;
     u32 idx_tail2 = list2->len + 1;
@@ -206,9 +218,16 @@ entity_list_unregister(EntityList *list1, EntityList *list2,
     u32 idx2 = entity_list_find(list2, name2);
     assert(idx2 != idx_tail2);
 
+    Entity *entity1 = list1->entities + idx1;
+    Entity *entity2 = list2->entities + idx2;
+
     // Unset the registration bits
-    (list1->entities + idx1)->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx2));
-    (list2->entities + idx2)->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx1));
+    entity1->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx2));
+    entity2->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx1));
+
+    // Update data relative of tournament distribution of players
+    tournament_construct_groups(entity2);
+    tournament_construct_bracket(entity2);
 }
 
 void
@@ -235,16 +254,11 @@ assign_medal(EntityList *players, EntityList *tournaments,
  *   - Player 6 at position 5, Player 8 at position 6 (fight first)
  *   - Winner of 5 vs 6 goes to position 2, fights position 1 for position 0
  *
- * @param tournaments     The tournament entity list
- * @param tournament_name Name of the tournament to construct bracket for
+ * @param tournament The tournament entity to construct bracket for
  */
 void
-tournament_construct_bracket(EntityList *tournaments, String8 tournament_name)
+tournament_construct_bracket(Entity *tournament)
 {
-    u32 idx = entity_list_find(tournaments, tournament_name);
-    assert(idx != tournaments->len + 1);
-
-    Entity *tournament = tournaments->entities + idx;
 
     // Clear the bracket
     MemoryZeroArray(tournament->bracket);
@@ -312,54 +326,77 @@ tournament_construct_groups(Entity *tournament)
         return;
     }
 
-    // Save desired group size before clearing
     u32 group_size = tournament->group_phase.group_size;
+    u32 advance_per_group = tournament->group_phase.advance_per_group;
 
     // Clear the group phase data
-    MemoryZeroStruct(&tournament->group_phase);
+    // MemoryZeroStruct(&tournament->group_phase);
 
-    // Initialize player_group to GROUP_NONE (since 0 is now a valid group index)
-    for (u32 i = 0; i <= MAX_NUM_ENTITIES; i++)
-    {
-        tournament->group_phase.player_group[i] = GROUP_NONE;
-    }
+    MemoryZeroArray(tournament->group_phase.groups);
+    MemorySet(tournament->group_phase.player_group, GROUP_NONE, MAX_NUM_ENTITIES + 1);
+    MemoryZeroArray(tournament->group_phase.player_slot);
 
-    // Restore desired group size
-    tournament->group_phase.group_size = group_size;
+    MemoryZeroArray(tournament->group_phase.scores);
+    MemoryZeroArray(tournament->group_phase.results);
 
-    // Find optimal number of groups that minimizes max distance from group_size
-    // When tied, prefer fewer groups
+    // // Initialize player_group to GROUP_NONE
+    // for (u32 i = 0; i <= MAX_NUM_ENTITIES; i++)
+    // {
+    //     tournament->group_phase.player_group[i] = GROUP_NONE;
+    // }
+
+    // Form groups, distributing players evenly when leftover is too small
+    // Example: 14 players with group_size=4 -> (4, 4, 4, 2)
+    // Example: 13 players with group_size=4 -> (5, 4, 4) instead of (4, 4, 4, 1)
+    u32 num_full_groups = num_players / group_size;
+    u32 leftover = num_players % group_size;
+
     u32 num_groups;
-    u32 groups_with_extra;  // Number of groups that get +1 player
+    b32 distribute_leftover = false;
 
     if (num_players < group_size)
     {
         // Not enough players for one full group - put everyone in one group
         num_groups = 1;
-        groups_with_extra = 0;
+    }
+    else if (leftover > 0 && leftover < 2)
+    {
+        // Leftover too small for meaningful group (need at least 2 for matches)
+        // Distribute leftover players among existing groups
+        num_groups = num_full_groups;
+        distribute_leftover = true;
     }
     else
     {
-        // Create complete groups and distribute remaining players among them
-        num_groups = num_players / group_size;
-        groups_with_extra = num_players % group_size;
+        // Full groups + one extra group for leftovers (if any)
+        num_groups = num_full_groups + (leftover > 0 ? 1 : 0);
     }
 
     tournament->group_phase.num_groups = num_groups;
 
-    // Assign players to groups
-    // First `groups_with_extra` groups have (group_size + 1) players
     u32 player_i = 0;
     for (u32 g = 0; g < num_groups; g++)
     {
         u32 players_in_this_group;
         if (num_players < group_size)
         {
+            // All players in one group
             players_in_this_group = num_players;
+        }
+        else if (distribute_leftover)
+        {
+            // Distribute leftover players among groups (first 'leftover' groups get +1)
+            players_in_this_group = group_size + (g < leftover ? 1 : 0);
+        }
+        else if (g < num_full_groups)
+        {
+            // Full groups get exactly group_size players
+            players_in_this_group = group_size;
         }
         else
         {
-            players_in_this_group = group_size + (g < groups_with_extra ? 1 : 0);
+            // Last group gets the leftover players
+            players_in_this_group = leftover;
         }
 
         for (u32 s = 0; s < players_in_this_group; s++)
@@ -370,5 +407,199 @@ tournament_construct_groups(Entity *tournament)
             tournament->group_phase.player_slot[global_idx] = s;
             player_i++;
         }
+    }
+}
+
+/**
+ * Calculate standings for a single group based on match results.
+ *
+ * Rankings are determined by:
+ * 1. Points (win = 3, draw = 1, loss = 0)
+ * 2. Goal difference
+ * 3. Goals scored
+ *
+ * @param tournament      The tournament entity
+ * @param group_idx       The group index to calculate standings for
+ * @param standings       Output array to store player indices sorted by rank
+ * @param players_in_group Number of players in this group
+ */
+static void
+calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 players_in_group)
+{
+    // Structure to hold player stats for sorting
+    typedef struct {
+        u8 player_idx;
+        s32 points;
+        s32 goal_diff;
+        s32 goals_for;
+    } PlayerStats;
+
+    PlayerStats stats[MAX_GROUP_SIZE] = {0};
+
+    // Calculate stats for each player in the group
+    for (u32 slot = 0; slot < players_in_group; slot++)
+    {
+        u8 player_idx = tournament->group_phase.groups[group_idx][slot];
+        stats[slot].player_idx = player_idx;
+
+        // Calculate points and goals from match results
+        for (u32 opponent = 0; opponent < players_in_group; opponent++)
+        {
+            if (slot == opponent) continue;
+
+            MatchScore score = tournament->group_phase.scores[group_idx][slot][opponent];
+
+            // Add goals scored by this player
+            stats[slot].goals_for += score.row_score;
+            stats[slot].goal_diff += score.row_score - score.col_score;
+
+            // Calculate points from result
+            if (score.row_score > score.col_score)
+            {
+                stats[slot].points += 3;  // Win
+            }
+            else if (score.row_score == score.col_score && (score.row_score > 0 || score.col_score > 0))
+            {
+                stats[slot].points += 1;  // Draw (only if match was played)
+            }
+        }
+    }
+
+    // Simple bubble sort by points, then goal diff, then goals scored
+    for (u32 i = 0; i < players_in_group - 1; i++)
+    {
+        for (u32 j = 0; j < players_in_group - i - 1; j++)
+        {
+            bool swap = false;
+            if (stats[j].points < stats[j + 1].points)
+            {
+                swap = true;
+            }
+            else if (stats[j].points == stats[j + 1].points)
+            {
+                if (stats[j].goal_diff < stats[j + 1].goal_diff)
+                {
+                    swap = true;
+                }
+                else if (stats[j].goal_diff == stats[j + 1].goal_diff)
+                {
+                    if (stats[j].goals_for < stats[j + 1].goals_for)
+                    {
+                        swap = true;
+                    }
+                }
+            }
+
+            if (swap)
+            {
+                PlayerStats temp = stats[j];
+                stats[j] = stats[j + 1];
+                stats[j + 1] = temp;
+            }
+        }
+    }
+
+    // Copy sorted player indices to output
+    for (u32 i = 0; i < players_in_group; i++)
+    {
+        standings[i] = stats[i].player_idx;
+    }
+}
+
+/**
+ * Populate the tournament bracket from group phase qualifiers.
+ *
+ * Takes the top N players from each group (where N = advance_per_group)
+ * and places them into the elimination bracket. Seeding is done to avoid
+ * players from the same group meeting in early rounds when possible.
+ *
+ * @param tournament The tournament entity with completed group phase
+ */
+void
+tournament_populate_bracket_from_groups(Entity *tournament)
+{
+    // Clear the bracket
+    MemoryZeroArray(tournament->bracket);
+
+    u32 num_groups = tournament->group_phase.num_groups;
+    u32 advance_per_group = tournament->group_phase.advance_per_group;
+
+    // Collect all qualifiers from each group
+    u8 qualifiers[MAX_GROUPS * MAX_GROUP_SIZE];
+    u32 num_qualifiers = 0;
+
+    for (u32 g = 0; g < num_groups; g++)
+    {
+        // Count players in this group
+        u32 players_in_group = 0;
+        for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
+        {
+            if (tournament->group_phase.groups[g][slot] != 0)
+            {
+                players_in_group++;
+            }
+        }
+
+        // Get standings for this group
+        u8 standings[MAX_GROUP_SIZE];
+        calculate_group_standings(tournament, g, standings, players_in_group);
+
+        // Take top N players from this group
+        u32 to_advance = advance_per_group;
+        if (to_advance > players_in_group)
+        {
+            to_advance = players_in_group;
+        }
+
+        for (u32 i = 0; i < to_advance; i++)
+        {
+            qualifiers[num_qualifiers++] = standings[i];
+        }
+    }
+
+    if (num_qualifiers == 0)
+    {
+        return;
+    }
+
+    // Find smallest power of 2 >= num_qualifiers
+    u32 bracket_size = 1;
+    while (bracket_size < num_qualifiers)
+    {
+        bracket_size *= 2;
+    }
+
+    u32 byes = bracket_size - num_qualifiers;
+
+    // Determine leaf level for this bracket size
+    u32 leaf_level = 0;
+    u32 tmp = bracket_size;
+    while (tmp > 1)
+    {
+        leaf_level++;
+        tmp /= 2;
+    }
+
+    u32 leaf_start = (1 << leaf_level) - 1;
+
+    u32 qualifier_idx = 0;
+
+    // Place bye players at parent level (they skip the first round)
+    for (u32 i = 0; i < byes && qualifier_idx < num_qualifiers; ++i)
+    {
+        u32 leaf_pos = leaf_start + i * 2;
+        u32 parent_pos = (leaf_pos - 1) / 2;
+        tournament->bracket[parent_pos] = qualifiers[qualifier_idx];
+        qualifier_idx++;
+    }
+
+    // Place remaining players at leaf positions (they fight in first round)
+    u32 fighting_start = leaf_start + byes * 2;
+
+    while (qualifier_idx < num_qualifiers)
+    {
+        tournament->bracket[fighting_start] = qualifiers[qualifier_idx];
+        fighting_start++;
+        qualifier_idx++;
     }
 }

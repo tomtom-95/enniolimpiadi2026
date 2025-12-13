@@ -399,6 +399,9 @@ HandleConfirmReturnToRegistration(Clay_ElementId elementId, Clay_PointerData poi
         Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
         tournament->state = TOURNAMENT_REGISTRATION;
         data.showReturnToRegistrationConfirm = false;
+
+        tournament_construct_groups(tournament);
+        tournament_construct_bracket(tournament);
     }
 }
 
@@ -616,7 +619,7 @@ HandleCancelRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData,
 void
 HandleIncrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)userData;
+    // (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -625,13 +628,15 @@ HandleIncrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData,
         {
             tournament->group_phase.group_size++;
         }
+
+        tournament_construct_groups(tournament);
     }
 }
 
 void
 HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)userData;
+    // (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -639,6 +644,41 @@ HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData,
         if (tournament->group_phase.group_size > 2)
         {
             tournament->group_phase.group_size--;
+        }
+
+        tournament_construct_groups(tournament);
+    }
+}
+
+void
+HandleIncrementAdvancePerGroup(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    (void)elementId;
+    (void)userData;
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        // Cannot advance more players than are in the group
+        if (tournament->group_phase.advance_per_group < tournament->group_phase.group_size - 1)
+        {
+            tournament->group_phase.advance_per_group++;
+        }
+    }
+}
+
+void
+HandleDecrementAdvancePerGroup(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    (void)elementId;
+    (void)userData;
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        if (tournament->group_phase.advance_per_group > 1)
+        {
+            tournament->group_phase.advance_per_group--;
         }
     }
 }
@@ -1515,6 +1555,76 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                 }));
             }
         }
+
+        // Advance per group selector (how many players advance from each group)
+        CLAY(CLAY_ID("AdvancePerGroupSelector"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 8, 8, 6, 6 },
+                .childGap = 8,
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+            },
+            .backgroundColor = dashCardBg,
+            .cornerRadius = CLAY_CORNER_RADIUS(8),
+            .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+        }) {
+            // Decrement button
+            CLAY(CLAY_ID("AdvancePerGroupDecrement"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIXED(28), .height = CLAY_SIZING_FIXED(28)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentOrange,
+                .cornerRadius = CLAY_CORNER_RADIUS(4)
+            }) {
+                Clay_OnHover(HandleDecrementAdvancePerGroup, NULL);
+                CLAY_TEXT(CLAY_STRING("-"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 18,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+
+            // Advance per group label and value
+            CLAY(CLAY_ID("AdvancePerGroupValue"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .childGap = 4,
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                }
+            }) {
+                CLAY_TEXT(CLAY_STRING("Advance:"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 12,
+                    .textColor = dashLabelText
+                }));
+                String8 advance_str = str8_u32(data.frameArena, tournament->group_phase.advance_per_group);
+                CLAY_TEXT(str8_to_clay(advance_str), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 14,
+                    .textColor = stringColor
+                }));
+            }
+
+            // Increment button
+            CLAY(CLAY_ID("AdvancePerGroupIncrement"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_FIXED(28), .height = CLAY_SIZING_FIXED(28)},
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? dashAccentPurple : dashAccentOrange,
+                .cornerRadius = CLAY_CORNER_RADIUS(4)
+            }) {
+                Clay_OnHover(HandleIncrementAdvancePerGroup, NULL);
+                CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 18,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+        }
     }
 
     // Show "Start Tournament" button if we have enough players
@@ -1913,10 +2023,10 @@ static void
 RenderSingleEliminationBracket(Entity *tournament, u32 num_players)
 {
     // Only reconstruct bracket during registration phase
-    if (tournament->state == TOURNAMENT_REGISTRATION)
-    {
-        tournament_construct_bracket(&data.tournaments, tournament->name);
-    }
+    // if (tournament->state == TOURNAMENT_REGISTRATION)
+    // {
+    //     tournament_construct_bracket(&data.tournaments, tournament->name);
+    // }
 
     // Calculate bracket size (next power of 2 >= num_players)
     u32 bracket_size = 1;
@@ -2203,10 +2313,10 @@ static void
 RenderGroupsChart(Entity *tournament)
 {
     // Only reconstruct groups during registration phase
-    if (tournament->state == TOURNAMENT_REGISTRATION)
-    {
-        tournament_construct_groups(tournament);
-    }
+    // if (tournament->state == TOURNAMENT_REGISTRATION)
+    // {
+    //     tournament_construct_groups(tournament);
+    // }
 
     // Get group info from the constructed group phase
     u32 num_groups = tournament->group_phase.num_groups;
@@ -2226,103 +2336,158 @@ RenderGroupsChart(Entity *tournament)
     u32 groups_per_row = (num_groups <= 2) ? num_groups : (num_groups <= 4) ? 2 : 3;
     u32 num_rows = (num_groups + groups_per_row - 1) / groups_per_row;
 
-    // Render groups in a grid layout (rows of groups)
-    CLAY(CLAY_ID("GroupsContainer"), {
+    // Main container for groups + bracket
+    CLAY(CLAY_ID("GroupsAndBracketContainer"), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-            .childGap = 24,
-            .padding = { 16, 16, 16, 16 }
+            .childGap = 32
         }
     }) {
-        for (u32 row = 0; row < num_rows; row++)
-        {
-            // Each row container
-            CLAY(CLAY_IDI("GroupRow", row), {
-                .layout = {
-                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                    .childGap = 24,
-                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_TOP }
-                }
-            }) {
-                // Groups in this row
-                u32 start_g = row * groups_per_row;
-                u32 end_g = start_g + groups_per_row;
-                if (end_g > num_groups)
-                {
-                    end_g = num_groups;
-                }
-
-                for (u32 g = start_g; g < end_g; g++)
-                {
-                    // Count actual players in this group
-                    u32 players_in_group = 0;
-                    for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
+        // Render groups in a grid layout (rows of groups)
+        CLAY(CLAY_ID("GroupsContainer"), {
+            .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                .childGap = 24,
+                .padding = { 16, 16, 16, 16 }
+            }
+        }) {
+            for (u32 row = 0; row < num_rows; row++)
+            {
+                // Each row container
+                CLAY(CLAY_IDI("GroupRow", row), {
+                    .layout = {
+                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                        .childGap = 24,
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_TOP }
+                    }
+                }) {
+                    // Groups in this row
+                    u32 start_g = row * groups_per_row;
+                    u32 end_g = start_g + groups_per_row;
+                    if (end_g > num_groups)
                     {
-                        if (tournament->group_phase.groups[g][slot] != 0)
-                        {
-                            players_in_group++;
-                        }
+                        end_g = num_groups;
                     }
 
-                    Clay_Color groupAccent = groupAccentColors[g % numAccentColors];
+                    for (u32 g = start_g; g < end_g; g++)
+                    {
+                        // Count actual players in this group
+                        u32 players_in_group = 0;
+                        for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
+                        {
+                            if (tournament->group_phase.groups[g][slot] != 0)
+                            {
+                                players_in_group++;
+                            }
+                        }
 
-                    // Outer container with accent bar
-                    CLAY(CLAY_IDI("GroupOuter", g), {
-                        .layout = {
-                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
-                        },
-                        .cornerRadius = CLAY_CORNER_RADIUS(12)
-                    }) {
-                        // Colored accent bar at top
-                        CLAY(CLAY_IDI("GroupAccent", g), {
-                            .layout = {
-                                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
-                            },
-                            .backgroundColor = groupAccent,
-                            .cornerRadius = { 12, 12, 0, 0 }
-                        }) {}
+                        Clay_Color groupAccent = groupAccentColors[g % numAccentColors];
 
-                        // Group content card
-                        CLAY(CLAY_IDI("Group", g), {
+                        // Outer container with accent bar
+                        CLAY(CLAY_IDI("GroupOuter", g), {
                             .layout = {
                                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-                                .padding = { 16, 16, 16, 16 },
-                                .childGap = 12
+                                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
                             },
-                            .backgroundColor = dashCardBg,
-                            .cornerRadius = { 0, 0, 12, 12 }
+                            .cornerRadius = CLAY_CORNER_RADIUS(12)
                         }) {
-                            // Group header with styled badge
-                            CLAY(CLAY_IDI("GroupHeader", g), {
+                            // Colored accent bar at top
+                            CLAY(CLAY_IDI("GroupAccent", g), {
                                 .layout = {
-                                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                                    .padding = { 12, 12, 8, 8 },
-                                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
                                 },
                                 .backgroundColor = groupAccent,
-                                .cornerRadius = CLAY_CORNER_RADIUS(8)
-                            }) {
-                                String8 group_prefix = str8_lit("GROUP ");
-                                String8 group_num = str8_u32(data.frameArena, g + 1);
-                                String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
-                                CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
-                                    .fontId = FONT_ID_PRESS_START_2P,
-                                    .fontSize = 16,
-                                    .textColor = COLOR_WHITE
-                                }));
-                            }
+                                .cornerRadius = { 12, 12, 0, 0 }
+                            }) {}
 
-                            RenderGroupMatrix(tournament, g, players_in_group);
+                            // Group content card
+                            CLAY(CLAY_IDI("Group", g), {
+                                .layout = {
+                                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                    .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                                    .padding = { 16, 16, 16, 16 },
+                                    .childGap = 12
+                                },
+                                .backgroundColor = dashCardBg,
+                                .cornerRadius = { 0, 0, 12, 12 }
+                            }) {
+                                // Group header with styled badge
+                                CLAY(CLAY_IDI("GroupHeader", g), {
+                                    .layout = {
+                                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                                        .padding = { 12, 12, 8, 8 },
+                                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                                    },
+                                    .backgroundColor = groupAccent,
+                                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                                }) {
+                                    String8 group_prefix = str8_lit("GROUP ");
+                                    String8 group_num = str8_u32(data.frameArena, g + 1);
+                                    String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
+                                    CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_PRESS_START_2P,
+                                        .fontSize = 16,
+                                        .textColor = COLOR_WHITE
+                                    }));
+                                }
+
+                                RenderGroupMatrix(tournament, g, players_in_group);
+                            }
                         }
                     }
                 }
             }
         }
+
+        // Render knockout bracket section
+        // Calculate number of qualifiers for the bracket
+        u32 num_qualifiers = num_groups * tournament->group_phase.advance_per_group;
+
+        // if (num_qualifiers >= 2)
+        // {
+        //     // Populate bracket from group qualifiers (recalculates standings each frame)
+        //     tournament_populate_bracket_from_groups(tournament);
+
+        //     // Knockout phase header
+        //     CLAY(CLAY_ID("KnockoutHeader"), {
+        //         .layout = {
+        //             .layoutDirection = CLAY_LEFT_TO_RIGHT,
+        //             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+        //             .padding = { 16, 16, 0, 0 },
+        //             .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        //         }
+        //     }) {
+        //         CLAY(CLAY_ID("KnockoutHeaderBadge"), {
+        //             .layout = {
+        //                 .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+        //                 .padding = { 16, 16, 10, 10 }
+        //             },
+        //             .backgroundColor = dashAccentCoral,
+        //             .cornerRadius = CLAY_CORNER_RADIUS(8)
+        //         }) {
+        //             CLAY_TEXT(CLAY_STRING("KNOCKOUT PHASE"), CLAY_TEXT_CONFIG({
+        //                 .fontId = FONT_ID_PRESS_START_2P,
+        //                 .fontSize = 16,
+        //                 .textColor = COLOR_WHITE
+        //             }));
+        //         }
+        //     }
+
+        //     // Render the elimination bracket
+        //     CLAY(CLAY_ID("KnockoutBracketContainer"), {
+        //         .layout = {
+        //             .layoutDirection = CLAY_TOP_TO_BOTTOM,
+        //             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+        //             .padding = { 16, 16, 16, 16 }
+        //         }
+        //     }) {
+        //         RenderSingleEliminationBracket(tournament, num_qualifiers);
+        //     }
+        // }
     }
 }
 

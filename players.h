@@ -115,7 +115,8 @@ void entity_list_remove(EntityList *list1, EntityList *list2, String8 name);
 void entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
 void entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
 
-void tournament_construct_bracket(EntityList *tournaments, String8 tournament_name);
+void tournament_construct_bracket(Entity *tournament);
 void tournament_construct_groups(Entity *tournament);
+void tournament_populate_bracket_from_groups(Entity *tournament);
 
 #endif // PLAYERS_H
