@@ -25,9 +25,10 @@ typedef enum MedalsEnum {
 } MedalsEnum;
 
 typedef enum TournamentState {
-    TOURNAMENT_REGISTRATION = 0,  // Players can register/unregister
-    TOURNAMENT_IN_PROGRESS  = 1,  // Bracket is locked, matches can be played
-    TOURNAMENT_FINISHED     = 2,  // Tournament completed
+    TOURNAMENT_REGISTRATION = 1 << 0,  // Players can register/unregister
+    TOURNAMENT_IN_PROGRESS  = 1 << 1,  // matches can be played
+    TOURNAMENT_KNOCKOUT     = 1 << 2,  // tournament is in the knockout phase, cannot modifies scores in groups but can update bracket
+    TOURNAMENT_FINISHED     = 1 << 3,  // tournament completed
 } TournamentState;
 
 typedef enum TournamentFormat {
@@ -47,7 +48,6 @@ typedef struct MatchScore {
     u16 col_score;  // Score of the column player
 } MatchScore;
 
-// TODO: really understand how group phase is populated
 typedef struct GroupPhase GroupPhase;
 typedef struct GroupPhase {
     u8 num_groups;
@@ -68,6 +68,11 @@ typedef struct GroupPhase {
     // Storing the upper diagonal is enough information, the lower one is redundant
     MatchScore  scores[MAX_GROUPS][MAX_GROUP_SIZE][MAX_GROUP_SIZE];
     MatchResult results[MAX_GROUPS][MAX_GROUP_SIZE][MAX_GROUP_SIZE];
+
+    // Elimination bracket for players who advance from groups
+    // Uses heap-style layout: children of i at 2*i+1 and 2*i+2
+    // Stores player indices. 0 means empty slot.
+    u8 bracket[BRACKET_SIZE];
 } GroupPhase;
 
 typedef struct Entity Entity;

@@ -51,6 +51,7 @@ entity_list_init(Arena *arena, u32 len)
     for (u32 i = 1; i < len + 1; ++i)
     {
         entity_list.entities[i].nxt = (i + 1) % tail_idx;
+        entity_list.entities[i].state = TOURNAMENT_REGISTRATION;
     }
 
     return entity_list;
@@ -329,21 +330,12 @@ tournament_construct_groups(Entity *tournament)
     u32 group_size = tournament->group_phase.group_size;
     u32 advance_per_group = tournament->group_phase.advance_per_group;
 
-    // Clear the group phase data
-    // MemoryZeroStruct(&tournament->group_phase);
-
     MemoryZeroArray(tournament->group_phase.groups);
     MemorySet(tournament->group_phase.player_group, GROUP_NONE, MAX_NUM_ENTITIES + 1);
     MemoryZeroArray(tournament->group_phase.player_slot);
 
     MemoryZeroArray(tournament->group_phase.scores);
     MemoryZeroArray(tournament->group_phase.results);
-
-    // // Initialize player_group to GROUP_NONE
-    // for (u32 i = 0; i <= MAX_NUM_ENTITIES; i++)
-    // {
-    //     tournament->group_phase.player_group[i] = GROUP_NONE;
-    // }
 
     // Form groups, distributing players evenly when leftover is too small
     // Example: 14 players with group_size=4 -> (4, 4, 4, 2)
@@ -518,8 +510,16 @@ calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 
 void
 tournament_populate_bracket_from_groups(Entity *tournament)
 {
+    // TODO: must not MemoryZeroArray, but a cleaning of the bracket
+    //       must happen when the group scores change, as soon as
+    //       the group scores changes we must update the possible
+    //       formation of the group
+    //       Also it would be useful to have a change of state
+    //       when the group phase of the tournament finished so
+    //       that I do not mix update of score in the groups with what is happening in the knockout phase
+
     // Clear the bracket
-    MemoryZeroArray(tournament->bracket);
+    MemoryZeroArray(tournament->group_phase.bracket);
 
     u32 num_groups = tournament->group_phase.num_groups;
     u32 advance_per_group = tournament->group_phase.advance_per_group;
@@ -589,7 +589,7 @@ tournament_populate_bracket_from_groups(Entity *tournament)
     {
         u32 leaf_pos = leaf_start + i * 2;
         u32 parent_pos = (leaf_pos - 1) / 2;
-        tournament->bracket[parent_pos] = qualifiers[qualifier_idx];
+        tournament->group_phase.bracket[parent_pos] = qualifiers[qualifier_idx];
         qualifier_idx++;
     }
 
@@ -598,7 +598,7 @@ tournament_populate_bracket_from_groups(Entity *tournament)
 
     while (qualifier_idx < num_qualifiers)
     {
-        tournament->bracket[fighting_start] = qualifiers[qualifier_idx];
+        tournament->group_phase.bracket[fighting_start] = qualifiers[qualifier_idx];
         fighting_start++;
         qualifier_idx++;
     }

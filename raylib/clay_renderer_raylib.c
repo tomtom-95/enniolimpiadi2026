@@ -253,12 +253,16 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
 
                         // Calculate bracket size (next power of 2 >= num_players)
                         uint32_t bracket_size = 1;
-                        while (bracket_size < num_players) bracket_size <<= 1;
+                        while (bracket_size < num_players)
+                        {
+                            bracket_size <<= 1;
+                        }
 
                         // Calculate number of rounds
                         uint32_t num_rounds = 0;
                         uint32_t temp = bracket_size;
-                        while (temp > 1) {
+                        while (temp > 1)
+                        {
                             temp >>= 1;
                             num_rounds++;
                         }

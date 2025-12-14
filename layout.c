@@ -332,7 +332,12 @@ HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, void
     Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
 
     // Only allow changes when tournament is in progress
-    if (tournament->state != TOURNAMENT_IN_PROGRESS) return;
+    if (!(tournament->state & TOURNAMENT_IN_PROGRESS)) return;
+
+    // Select the appropriate bracket based on tournament format
+    u8 *bracket = (tournament->format == FORMAT_GROUPS_THEN_BRACKET)
+        ? tournament->group_phase.bracket
+        : tournament->bracket;
 
     // Calculate parent position in the bracket tree
     u32 parent_pos = (bracket_pos - 1) / 2;
@@ -345,9 +350,9 @@ HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, void
         while (pos > 0)
         {
             u32 parent = (pos - 1) / 2;
-            if (tournament->bracket[parent] == player_idx)
+            if (bracket[parent] == player_idx)
             {
-                tournament->bracket[parent] = 0;
+                bracket[parent] = 0;
             }
             pos = parent;
         }
@@ -355,7 +360,7 @@ HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, void
     // Left-click: advance non-TBD player
     else if (player_idx != 0 && pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        tournament->bracket[parent_pos] = player_idx;
+        bracket[parent_pos] = player_idx;
     }
 }
 
@@ -402,17 +407,28 @@ HandleConfirmReturnToRegistration(Clay_ElementId elementId, Clay_PointerData poi
 
         tournament_construct_groups(tournament);
         tournament_construct_bracket(tournament);
+        tournament_populate_bracket_from_groups(tournament);
     }
 }
 
 void
 HandleCancelReturnToRegistration(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         data.showReturnToRegistrationConfirm = false;
+    }
+}
+
+void
+HandleTerminateGroupPhase(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        tournament->state |= TOURNAMENT_KNOCKOUT;
     }
 }
 
@@ -700,7 +716,7 @@ HandleMatrixCellClick(Clay_ElementId elementId, Clay_PointerData pointerData, vo
 
     // Only allow score entry when tournament is in progress
     Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
-    if (tournament->state != TOURNAMENT_IN_PROGRESS)
+    if (!(tournament->state & TOURNAMENT_IN_PROGRESS))
     {
         return;
     }
@@ -1767,6 +1783,30 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
         }));
     }
 
+    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+    if (tournament->format == FORMAT_GROUPS_THEN_BRACKET)
+    {
+        if (tournament->state & TOURNAMENT_IN_PROGRESS && !(tournament->state & TOURNAMENT_KNOCKOUT))
+        {
+            CLAY(CLAY_ID("TerminateGroupPhase"), {
+                .layout = {
+                    .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                    .padding = { 10, 10, 8, 8 },
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? dashAccentCoral : dashAccentPurple,
+                .cornerRadius = CLAY_CORNER_RADIUS(8)
+            }) {
+                Clay_OnHover(HandleTerminateGroupPhase, NULL);
+                CLAY_TEXT(CLAY_STRING("Terminate Group Phase"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 14,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+        }
+    }
+
     CLAY_TEXT(CLAY_STRING("Left click a player name to advance them to the next round."), CLAY_TEXT_CONFIG({
         .fontId = FONT_ID_BODY_16,
         .fontSize = 14,
@@ -1804,9 +1844,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
 
 void
 RenderMatchSlot(Clay_String player1_name, Clay_String player2_name,
-    u8 player1_idx, u8 player2_idx,
-    u32 bracket_pos1, u32 bracket_pos2,
-    u32 match_id, float zoom)
+    u8 player1_idx, u8 player2_idx, u32 bracket_pos1, u32 bracket_pos2, u32 match_id, float zoom)
 {
     bool player1_is_tbd = (player1_idx == 0);
     bool player2_is_tbd = (player2_idx == 0);
@@ -2018,102 +2056,160 @@ RenderByeSlot(u32 match_id, float zoom)
     }
 }
 
-// Render single elimination bracket
 static void
-RenderSingleEliminationBracket(Entity *tournament, u32 num_players)
+RenderGroupPhaseHeader(void)
 {
-    // Only reconstruct bracket during registration phase
-    // if (tournament->state == TOURNAMENT_REGISTRATION)
-    // {
-    //     tournament_construct_bracket(&data.tournaments, tournament->name);
-    // }
-
-    // Calculate bracket size (next power of 2 >= num_players)
-    u32 bracket_size = 1;
-    while (bracket_size < num_players)
-    {
-        bracket_size <<= 1;
-    }
-
-    // Calculate number of rounds based on bracket size
-    u32 num_rounds = 0;
-    u32 temp = bracket_size;
-    while (temp > 1)
-    {
-        temp >>= 1;
-        num_rounds++;
-    }
-
-    // Create horizontal layout for rounds (left to right)
-    float zoom = data.chartZoomLevel;
-    CLAY(CLAY_ID("RoundsContainer"), {
+    CLAY(CLAY_ID("GroupPhaseHeader"), {
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-            .childGap = (u16)(32 * zoom),
-            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-        },
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+            .padding = { 0, 0, 16, 16 },
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        }
     }) {
-        for (u32 round = 0; round < num_rounds; round++)
+        CLAY(CLAY_ID("GroupPhaseHeaderBadge"), {
+            .layout = {
+                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                .padding = { 16, 16, 10, 10 }
+            },
+            .backgroundColor = dashAccentCoral,
+            .cornerRadius = CLAY_CORNER_RADIUS(8)
+        }) {
+            CLAY_TEXT(CLAY_STRING("GROUP PHASE"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_PRESS_START_2P,
+                .fontSize = 16,
+                .textColor = COLOR_WHITE
+            }));
+        }
+    }
+}
+
+static void
+RenderKnockoutHeader(void)
+{
+    CLAY(CLAY_ID("KnockoutHeader"), {
+        .layout = {
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+        }
+    }) {
+        CLAY(CLAY_ID("KnockoutHeaderBadge"), {
+            .layout = {
+                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                .padding = { 16, 16, 10, 10 }
+            },
+            .backgroundColor = dashAccentCoral,
+            .cornerRadius = CLAY_CORNER_RADIUS(8)
+        }) {
+            CLAY_TEXT(CLAY_STRING("KNOCKOUT PHASE"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_PRESS_START_2P,
+                .fontSize = 16,
+                .textColor = COLOR_WHITE
+            }));
+        }
+    }
+}
+
+// Render single elimination bracket
+static void
+RenderKnockoutChart(u8 *bracket, u32 num_players)
+{
+
+    CLAY(CLAY_ID("KnockoutBracketContainer"), {
+        .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+            .padding = { 16, 16, 16, 16 }
+        }
+    }) {
+        // Calculate bracket size (next power of 2 >= num_players)
+        u32 bracket_size = 1;
+        while (bracket_size < num_players)
         {
-            u32 matches_in_round = bracket_size >> (round + 1);
-            // Each slot grows by 2^round so matches align with parent matches
-            u32 grow_factor = 1 << round;
+            bracket_size <<= 1;
+        }
 
-            // Calculate bracket level for this visual round
-            // Visual round 0 (leftmost) = deepest level, round (num_rounds-1) = level 1 (finals)
-            u32 bracket_level = num_rounds - round;
-            u32 level_base = (1u << bracket_level) - 1;  // First index at this level
+        // Calculate number of rounds based on bracket size
+        u32 num_rounds = 0;
+        u32 temp = bracket_size;
+        while (temp > 1)
+        {
+            temp >>= 1;
+            num_rounds++;
+        }
 
-            CLAY(CLAY_IDI("Round", round), {
-                .layout = {
-                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                }
-            }) {
-                // Matches in this round
-                for (u32 match = 0; match < matches_in_round; match++)
-                {
-                    u32 match_id = round * 100 + match;
+        // Create horizontal layout for rounds (left to right)
+        float zoom = data.chartZoomLevel;
+        CLAY(CLAY_ID("RoundsContainer"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                .childGap = (u16)(32 * zoom),
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+            },
+        }) {
+            for (u32 round = 0; round < num_rounds; round++)
+            {
+                u32 matches_in_round = bracket_size >> (round + 1);
+                // Each slot grows by 2^round so matches align with parent matches
+                u32 grow_factor = 1 << round;
 
-                    // Get the two bracket positions for this match
-                    u32 pos1 = level_base + match * 2;
-                    u32 pos2 = level_base + match * 2 + 1;
+                // Calculate bracket level for this visual round
+                // Visual round 0 (leftmost) = deepest level, round (num_rounds-1) = level 1 (finals)
+                u32 bracket_level = num_rounds - round;
+                u32 level_base = (1u << bracket_level) - 1;  // First index at this level
 
-                    u8 player1_idx = tournament->bracket[pos1];
-                    u8 player2_idx = tournament->bracket[pos2];
+                CLAY(CLAY_IDI("Round", round), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    }
+                }) {
+                    // Matches in this round
+                    for (u32 match = 0; match < matches_in_round; match++)
+                    {
+                        u32 match_id = round * 100 + match;
 
-                    // Slot container that grows proportionally and centers the match
-                    CLAY(CLAY_IDI("MatchSlot", match_id), {
-                        .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_GROW(grow_factor) },
-                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
-                        }
-                    }) {
-                        // BYE slots only exist in the first round
-                        if (round == 0 && player1_idx == 0 && player2_idx == 0)
-                        {
-                            RenderByeSlot(match_id, zoom);
-                        }
-                        else
-                        {
-                            // Render match slot (with players or TBD)
-                            Clay_String name1 = CLAY_STRING("TBD");
-                            Clay_String name2 = CLAY_STRING("TBD");
+                        // Get the two bracket positions for this match
+                        u32 pos1 = level_base + match * 2;
+                        u32 pos2 = level_base + match * 2 + 1;
 
-                            if (player1_idx != 0)
-                            {
-                                Entity *player1 = data.players.entities + player1_idx;
-                                name1 = str8_to_clay_truncated(data.frameArena, player1->name, MAX_DISPLAY_NAME_LEN);
+                        u8 player1_idx = bracket[pos1];
+                        u8 player2_idx = bracket[pos2];
+
+                        // Slot container that grows proportionally and centers the match
+                        CLAY(CLAY_IDI("MatchSlot", match_id), {
+                            .layout = {
+                                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_GROW(grow_factor) },
+                                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                             }
-                            if (player2_idx != 0)
+                        }) {
+                            // BYE slots only exist in the first round
+                            if (round == 0 && player1_idx == 0 && player2_idx == 0)
                             {
-                                Entity *player2 = data.players.entities + player2_idx;
-                                name2 = str8_to_clay_truncated(data.frameArena, player2->name, MAX_DISPLAY_NAME_LEN);
+                                RenderByeSlot(match_id, zoom);
                             }
+                            else
+                            {
+                                // Render match slot (with players or TBD)
+                                Clay_String name1 = CLAY_STRING("TBD");
+                                Clay_String name2 = CLAY_STRING("TBD");
 
-                            RenderMatchSlot(name1, name2, player1_idx, player2_idx, pos1, pos2, match_id, zoom);
+                                if (player1_idx != 0)
+                                {
+                                    Entity *player1 = data.players.entities + player1_idx;
+                                    name1 = str8_to_clay_truncated(data.frameArena, player1->name, MAX_DISPLAY_NAME_LEN);
+                                }
+                                if (player2_idx != 0)
+                                {
+                                    Entity *player2 = data.players.entities + player2_idx;
+                                    name2 = str8_to_clay_truncated(data.frameArena, player2->name, MAX_DISPLAY_NAME_LEN);
+                                }
+
+                                RenderMatchSlot(name1, name2, player1_idx, player2_idx, pos1, pos2, match_id, zoom);
+                            }
                         }
                     }
                 }
@@ -2270,7 +2366,11 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                                     pCellData->row_idx = row;
                                     pCellData->col_idx = col;
                                     pCellData->cell_id = cell_id;
-                                    Clay_OnHover(HandleMatrixCellClick, pCellData);
+
+                                    if (!(tournament->state & TOURNAMENT_KNOCKOUT))
+                                    {
+                                        Clay_OnHover(HandleMatrixCellClick, pCellData);
+                                    }
 
                                     // Get the score for this cell
                                     MatchScore score = tournament->group_phase.scores[group_idx][row][col];
@@ -2310,14 +2410,8 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
 }
 
 static void
-RenderGroupsChart(Entity *tournament)
+RenderGroupsKnockoutChart(Entity *tournament)
 {
-    // Only reconstruct groups during registration phase
-    // if (tournament->state == TOURNAMENT_REGISTRATION)
-    // {
-    //     tournament_construct_groups(tournament);
-    // }
-
     // Get group info from the constructed group phase
     u32 num_groups = tournament->group_phase.num_groups;
 
@@ -2335,6 +2429,8 @@ RenderGroupsChart(Entity *tournament)
     // 1-2 groups: 1 row, 3-4 groups: 2 per row, 5+ groups: 3 per row
     u32 groups_per_row = (num_groups <= 2) ? num_groups : (num_groups <= 4) ? 2 : 3;
     u32 num_rows = (num_groups + groups_per_row - 1) / groups_per_row;
+
+    RenderGroupPhaseHeader();
 
     // Main container for groups + bracket
     CLAY(CLAY_ID("GroupsAndBracketContainer"), {
@@ -2447,47 +2543,20 @@ RenderGroupsChart(Entity *tournament)
         // Calculate number of qualifiers for the bracket
         u32 num_qualifiers = num_groups * tournament->group_phase.advance_per_group;
 
-        // if (num_qualifiers >= 2)
-        // {
-        //     // Populate bracket from group qualifiers (recalculates standings each frame)
-        //     tournament_populate_bracket_from_groups(tournament);
+        if (num_qualifiers >= 2)
+        {
+            if (!(tournament->state & TOURNAMENT_KNOCKOUT))
+            {
+                // Populate bracket from group qualifiers
+                tournament_populate_bracket_from_groups(tournament);
+            }
 
-        //     // Knockout phase header
-        //     CLAY(CLAY_ID("KnockoutHeader"), {
-        //         .layout = {
-        //             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-        //             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-        //             .padding = { 16, 16, 0, 0 },
-        //             .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
-        //         }
-        //     }) {
-        //         CLAY(CLAY_ID("KnockoutHeaderBadge"), {
-        //             .layout = {
-        //                 .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-        //                 .padding = { 16, 16, 10, 10 }
-        //             },
-        //             .backgroundColor = dashAccentCoral,
-        //             .cornerRadius = CLAY_CORNER_RADIUS(8)
-        //         }) {
-        //             CLAY_TEXT(CLAY_STRING("KNOCKOUT PHASE"), CLAY_TEXT_CONFIG({
-        //                 .fontId = FONT_ID_PRESS_START_2P,
-        //                 .fontSize = 16,
-        //                 .textColor = COLOR_WHITE
-        //             }));
-        //         }
-        //     }
-
-        //     // Render the elimination bracket
-        //     CLAY(CLAY_ID("KnockoutBracketContainer"), {
-        //         .layout = {
-        //             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-        //             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-        //             .padding = { 16, 16, 16, 16 }
-        //         }
-        //     }) {
-        //         RenderSingleEliminationBracket(tournament, num_qualifiers);
-        //     }
-        // }
+            if (tournament->state & TOURNAMENT_KNOCKOUT)
+            {
+                RenderKnockoutHeader();
+                RenderKnockoutChart(tournament->group_phase.bracket, num_qualifiers);
+            }
+        }
     }
 }
 
@@ -2526,11 +2595,11 @@ RenderTournamentLeftPanel(u32 tournament_idx)
             s32 registered_positions[64] = {0};
             u32 registered_count = find_all_filled_slots(panel_tournament->registrations, registered_positions);
 
-            if (panel_tournament->state == TOURNAMENT_REGISTRATION)
+            if (panel_tournament->state & TOURNAMENT_REGISTRATION)
             {
                 RenderRegistrationPanel(tournament_idx, panel_tournament, registered_positions, registered_count);
             }
-            else if (panel_tournament->state == TOURNAMENT_IN_PROGRESS)
+            else if (panel_tournament->state & TOURNAMENT_IN_PROGRESS)
             {
                 RenderInProgressPanel(registered_positions, registered_count);
             }
@@ -2560,6 +2629,7 @@ RenderTournamentRightPanel(u32 tournament_idx)
         // Right panel - Tournament chart
         CLAY(CLAY_ID("TournamentChart"), {
             .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
                 .sizing = layoutExpand,
                 .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_TOP }
             },
@@ -2576,7 +2646,7 @@ RenderTournamentRightPanel(u32 tournament_idx)
 
             if (tournament->format == FORMAT_SINGLE_ELIMINATION)
             {
-                RenderSingleEliminationBracket(tournament, num_players);
+                RenderKnockoutChart(tournament->bracket, num_players);
 
                 // Custom element for drawing bezier curve connections
                 // This is rendered as part of Clay's render commands, in the correct z-order
@@ -2599,7 +2669,30 @@ RenderTournamentRightPanel(u32 tournament_idx)
             }
             else // FORMAT_GROUPS_THEN_BRACKET
             {
-                RenderGroupsChart(tournament);
+                RenderGroupsKnockoutChart(tournament);
+
+                if (tournament->state & TOURNAMENT_KNOCKOUT)
+                {
+                    u32 num_groups = tournament->group_phase.num_groups;
+                    u32 num_qualifiers = num_groups * tournament->group_phase.advance_per_group;
+
+                    static CustomLayoutElement bracketConnectionsElement;
+                    bracketConnectionsElement.type = CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS;
+                    bracketConnectionsElement.customData.bracketConnections.num_players = num_qualifiers;
+                    bracketConnectionsElement.customData.bracketConnections.zoom = data.chartZoomLevel;
+                    bracketConnectionsElement.customData.bracketConnections.yOffset = data.yOffset;
+
+                    // Use floating element so it doesn't move with childOffset/scroll
+                    // This prevents Clay from culling it when the bracket is panned
+                    CLAY(CLAY_ID("BracketConnections"), {
+                        .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) } },
+                        .floating = {
+                            .attachTo = CLAY_ATTACH_TO_PARENT,
+                            .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_PASSTHROUGH
+                        },
+                        .custom = { .customData = &bracketConnectionsElement }
+                    }) {}
+                }
             }
         }
     }
