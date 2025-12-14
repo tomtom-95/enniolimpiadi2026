@@ -174,6 +174,7 @@ entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
         // Update data relative of tournament distribution of players
         tournament_construct_groups(entity2);
         tournament_construct_bracket(entity2);
+        tournament_populate_bracket_from_groups(entity2);
     }
 
     (list1->entities + entity->prv)->nxt = entity->nxt;
@@ -205,6 +206,7 @@ entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String
     // Update data relative of tournament distribution of players
     tournament_construct_groups(entity2);
     tournament_construct_bracket(entity2);
+    tournament_populate_bracket_from_groups(entity2);
 }
 
 void
@@ -229,6 +231,7 @@ entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, Stri
     // Update data relative of tournament distribution of players
     tournament_construct_groups(entity2);
     tournament_construct_bracket(entity2);
+    tournament_populate_bracket_from_groups(entity2);
 }
 
 void
@@ -510,14 +513,6 @@ calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 
 void
 tournament_populate_bracket_from_groups(Entity *tournament)
 {
-    // TODO: must not MemoryZeroArray, but a cleaning of the bracket
-    //       must happen when the group scores change, as soon as
-    //       the group scores changes we must update the possible
-    //       formation of the group
-    //       Also it would be useful to have a change of state
-    //       when the group phase of the tournament finished so
-    //       that I do not mix update of score in the groups with what is happening in the knockout phase
-
     // Clear the bracket
     MemoryZeroArray(tournament->group_phase.bracket);
 
