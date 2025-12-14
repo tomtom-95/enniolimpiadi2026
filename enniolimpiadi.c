@@ -22,8 +22,11 @@ HandleClayErrors(Clay_ErrorData errorData)
 int
 main(void)
 {
-    Clay_Raylib_Initialize(GetScreenWidth(), GetScreenHeight(), "Introducing Clay Demo",
+    Clay_Raylib_Initialize(1280, 720, "Enniolimpiadi 2026",
         FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
+
+    // Maximize window after creation to get proper dimensions
+    MaximizeWindow();
 
     // Increased with respect to the default
     Clay_SetMaxElementCount(16384);
@@ -31,6 +34,7 @@ main(void)
     uint64_t clayRequiredMemory = Clay_MinMemorySize();
     Clay_Arena clayMemory = Clay_CreateArenaWithCapacityAndMemory(clayRequiredMemory, malloc(clayRequiredMemory));
 
+    // Initialize Clay with actual window dimensions after maximizing
     Clay_Initialize(clayMemory, (Clay_Dimensions) {
        .width = GetScreenWidth(),
        .height = GetScreenHeight()
