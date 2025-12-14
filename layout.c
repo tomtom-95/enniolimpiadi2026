@@ -2115,14 +2115,31 @@ RenderKnockoutHeader(void)
 static void
 RenderKnockoutChart(u8 *bracket, u32 num_players)
 {
-
     CLAY(CLAY_ID("KnockoutBracketContainer"), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
             .padding = { 16, 16, 16, 16 }
-        }
+        },
+        .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
     }) {
+        static CustomLayoutElement bracketConnectionsElement;
+        bracketConnectionsElement.type = CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS;
+        bracketConnectionsElement.customData.bracketConnections.num_players = num_players;
+        bracketConnectionsElement.customData.bracketConnections.zoom = data.chartZoomLevel;
+        bracketConnectionsElement.customData.bracketConnections.yOffset = data.yOffset;
+
+        // Use floating element so it doesn't move with childOffset/scroll
+        // This prevents Clay from culling it when the bracket is panned
+        CLAY(CLAY_ID("BracketConnections"), {
+            .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) } },
+            .floating = {
+                .attachTo = CLAY_ATTACH_TO_PARENT,
+                .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_PASSTHROUGH
+            },
+            .custom = { .customData = &bracketConnectionsElement }
+        }) {}
+
         // Calculate bracket size (next power of 2 >= num_players)
         u32 bracket_size = 1;
         while (bracket_size < num_players)
@@ -2425,137 +2442,107 @@ RenderGroupsKnockoutChart(Entity *tournament)
     };
     u32 numAccentColors = sizeof(groupAccentColors) / sizeof(groupAccentColors[0]);
 
-    // Calculate groups per row based on number of groups
-    // 1-2 groups: 1 row, 3-4 groups: 2 per row, 5+ groups: 3 per row
-    u32 groups_per_row = (num_groups <= 2) ? num_groups : (num_groups <= 4) ? 2 : 3;
-    u32 num_rows = (num_groups + groups_per_row - 1) / groups_per_row;
+    // Calculate number of qualifiers for the bracket
+    u32 num_qualifiers = num_groups * tournament->group_phase.advance_per_group;
 
-    RenderGroupPhaseHeader();
+    // Populate bracket from group qualifiers (always, so bracket is visible)
+    tournament_populate_bracket_from_groups(tournament);
 
-    // Main container for groups + bracket
+    // Main container: groups on left, knockout bracket on right
     CLAY(CLAY_ID("GroupsAndBracketContainer"), {
         .layout = {
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-            .childGap = 32
+            .childGap = 32,
+            .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_TOP }
         }
     }) {
-        // Render groups in a grid layout (rows of groups)
+        // Left side: Groups stacked vertically
         CLAY(CLAY_ID("GroupsContainer"), {
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                .childGap = 24,
+                .sizing = { .width = CLAY_SIZING_FIT(GetScreenWidth() * 0.4f), .height = CLAY_SIZING_FIT(0) },
+                .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
+                .childGap = 16,
                 .padding = { 16, 16, 16, 16 }
-            }
+            },
+            .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
-            for (u32 row = 0; row < num_rows; row++)
+            for (u32 g = 0; g < num_groups; g++)
             {
-                // Each row container
-                CLAY(CLAY_IDI("GroupRow", row), {
+                // Count actual players in this group
+                u32 players_in_group = 0;
+                for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
+                {
+                    if (tournament->group_phase.groups[g][slot] != 0)
+                    {
+                        players_in_group++;
+                    }
+                }
+
+                Clay_Color groupAccent = groupAccentColors[g % numAccentColors];
+
+                // Outer container with accent bar
+                CLAY(CLAY_IDI("GroupOuter", g), {
                     .layout = {
-                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                        .childGap = 24,
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_TOP }
-                    }
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
+                    },
+                    .cornerRadius = CLAY_CORNER_RADIUS(12),
                 }) {
-                    // Groups in this row
-                    u32 start_g = row * groups_per_row;
-                    u32 end_g = start_g + groups_per_row;
-                    if (end_g > num_groups)
-                    {
-                        end_g = num_groups;
-                    }
+                    // Colored accent bar at top
+                    CLAY(CLAY_IDI("GroupAccent", g), {
+                        .layout = {
+                            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
+                        },
+                        .backgroundColor = groupAccent,
+                        .cornerRadius = { 12, 12, 0, 0 }
+                    }) {}
 
-                    for (u32 g = start_g; g < end_g; g++)
-                    {
-                        // Count actual players in this group
-                        u32 players_in_group = 0;
-                        for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
-                        {
-                            if (tournament->group_phase.groups[g][slot] != 0)
-                            {
-                                players_in_group++;
-                            }
-                        }
-
-                        Clay_Color groupAccent = groupAccentColors[g % numAccentColors];
-
-                        // Outer container with accent bar
-                        CLAY(CLAY_IDI("GroupOuter", g), {
+                    // Group content card
+                    CLAY(CLAY_IDI("Group", g), {
+                        .layout = {
+                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                            .padding = { 16, 16, 16, 16 },
+                            .childGap = 12,
+                            .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                        },
+                        .backgroundColor = dashCardBg,
+                        .cornerRadius = { 0, 0, 12, 12 }
+                    }) {
+                        // Group header with styled badge - clickable to toggle matrix
+                        CLAY(CLAY_IDI("GroupHeader", g), {
                             .layout = {
-                                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
+                                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                                .padding = { 12, 12, 8, 8 },
+                                .childGap = 8,
+                                .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                             },
-                            .cornerRadius = CLAY_CORNER_RADIUS(12)
+                            .backgroundColor = Clay_Hovered() ? dashAccentPurple : groupAccent,
+                            .cornerRadius = CLAY_CORNER_RADIUS(8)
                         }) {
-                            // Colored accent bar at top
-                            CLAY(CLAY_IDI("GroupAccent", g), {
-                                .layout = {
-                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
-                                },
-                                .backgroundColor = groupAccent,
-                                .cornerRadius = { 12, 12, 0, 0 }
-                            }) {}
-
-                            // Group content card
-                            CLAY(CLAY_IDI("Group", g), {
-                                .layout = {
-                                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                                    .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-                                    .padding = { 16, 16, 16, 16 },
-                                    .childGap = 12
-                                },
-                                .backgroundColor = dashCardBg,
-                                .cornerRadius = { 0, 0, 12, 12 }
-                            }) {
-                                // Group header with styled badge
-                                CLAY(CLAY_IDI("GroupHeader", g), {
-                                    .layout = {
-                                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                                        .padding = { 12, 12, 8, 8 },
-                                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
-                                    },
-                                    .backgroundColor = groupAccent,
-                                    .cornerRadius = CLAY_CORNER_RADIUS(8)
-                                }) {
-                                    String8 group_prefix = str8_lit("GROUP ");
-                                    String8 group_num = str8_u32(data.frameArena, g + 1);
-                                    String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
-                                    CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
-                                        .fontId = FONT_ID_PRESS_START_2P,
-                                        .fontSize = 16,
-                                        .textColor = COLOR_WHITE
-                                    }));
-                                }
-
-                                RenderGroupMatrix(tournament, g, players_in_group);
-                            }
+                            String8 group_prefix = str8_lit("GROUP ");
+                            String8 group_num = str8_u32(data.frameArena, g + 1);
+                            String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
+                            CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
+                                .fontId = FONT_ID_PRESS_START_2P,
+                                .fontSize = 16,
+                                .textColor = COLOR_WHITE
+                            }));
                         }
+
+                        RenderGroupMatrix(tournament, g, players_in_group);
                     }
                 }
             }
         }
 
-        // Render knockout bracket section
-        // Calculate number of qualifiers for the bracket
-        u32 num_qualifiers = num_groups * tournament->group_phase.advance_per_group;
-
+        // Right side: Knockout bracket (always visible)
         if (num_qualifiers >= 2)
         {
-            if (!(tournament->state & TOURNAMENT_KNOCKOUT))
-            {
-                // Populate bracket from group qualifiers
-                tournament_populate_bracket_from_groups(tournament);
-            }
-
-            if (tournament->state & TOURNAMENT_KNOCKOUT)
-            {
-                RenderKnockoutHeader();
-                RenderKnockoutChart(tournament->group_phase.bracket, num_qualifiers);
-            }
+            RenderKnockoutChart(tournament->group_phase.bracket, num_qualifiers);
         }
     }
 }
@@ -2635,7 +2622,7 @@ RenderTournamentRightPanel(u32 tournament_idx)
             },
             .backgroundColor = dashCardBg,
             .cornerRadius = { 0, 0, 12, 12 },
-            .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+            // .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
             Clay_OnHover(HandleChartHover, NULL);
             Entity *tournament = data.tournaments.entities + tournament_idx;
@@ -2647,52 +2634,10 @@ RenderTournamentRightPanel(u32 tournament_idx)
             if (tournament->format == FORMAT_SINGLE_ELIMINATION)
             {
                 RenderKnockoutChart(tournament->bracket, num_players);
-
-                // Custom element for drawing bezier curve connections
-                // This is rendered as part of Clay's render commands, in the correct z-order
-                static CustomLayoutElement bracketConnectionsElement;
-                bracketConnectionsElement.type = CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS;
-                bracketConnectionsElement.customData.bracketConnections.num_players = num_players;
-                bracketConnectionsElement.customData.bracketConnections.zoom = data.chartZoomLevel;
-                bracketConnectionsElement.customData.bracketConnections.yOffset = data.yOffset;
-
-                // Use floating element so it doesn't move with childOffset/scroll
-                // This prevents Clay from culling it when the bracket is panned
-                CLAY(CLAY_ID("BracketConnections"), {
-                    .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) } },
-                    .floating = {
-                        .attachTo = CLAY_ATTACH_TO_PARENT,
-                        .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_PASSTHROUGH
-                    },
-                    .custom = { .customData = &bracketConnectionsElement }
-                }) {}
             }
             else // FORMAT_GROUPS_THEN_BRACKET
             {
                 RenderGroupsKnockoutChart(tournament);
-
-                if (tournament->state & TOURNAMENT_KNOCKOUT)
-                {
-                    u32 num_groups = tournament->group_phase.num_groups;
-                    u32 num_qualifiers = num_groups * tournament->group_phase.advance_per_group;
-
-                    static CustomLayoutElement bracketConnectionsElement;
-                    bracketConnectionsElement.type = CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS;
-                    bracketConnectionsElement.customData.bracketConnections.num_players = num_qualifiers;
-                    bracketConnectionsElement.customData.bracketConnections.zoom = data.chartZoomLevel;
-                    bracketConnectionsElement.customData.bracketConnections.yOffset = data.yOffset;
-
-                    // Use floating element so it doesn't move with childOffset/scroll
-                    // This prevents Clay from culling it when the bracket is panned
-                    CLAY(CLAY_ID("BracketConnections"), {
-                        .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) } },
-                        .floating = {
-                            .attachTo = CLAY_ATTACH_TO_PARENT,
-                            .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_PASSTHROUGH
-                        },
-                        .custom = { .customData = &bracketConnectionsElement }
-                    }) {}
-                }
             }
         }
     }

@@ -1,5 +1,6 @@
 #include "layout.h"
 #include "players.h"
+#include "raylib/raylib.h"
 #define CLAY_IMPLEMENTATION
 
 #include "core.h"
@@ -21,7 +22,7 @@ HandleClayErrors(Clay_ErrorData errorData)
 int
 main(void)
 {
-    Clay_Raylib_Initialize(1024, 768, "Introducing Clay Demo",
+    Clay_Raylib_Initialize(GetScreenWidth(), GetScreenHeight(), "Introducing Clay Demo",
         FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
 
     // Increased with respect to the default
