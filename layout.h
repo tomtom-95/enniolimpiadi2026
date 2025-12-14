@@ -24,10 +24,10 @@ typedef struct {
 
 typedef enum Page
 {
-    PAGE_Dashboard,
-    PAGE_Events,
-    PAGE_Players,
-    PAGE_Results,
+    PAGE_Dashboard = 0,
+    PAGE_Events    = 1,
+    PAGE_Players   = 2,
+    PAGE_Results   = 3,
 }
 Page;
 

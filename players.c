@@ -51,7 +51,7 @@ entity_list_init(Arena *arena, u32 len)
     for (u32 i = 1; i < len + 1; ++i)
     {
         entity_list.entities[i].nxt = (i + 1) % tail_idx;
-        entity_list.entities[i].state = TOURNAMENT_REGISTRATION;
+        entity_list.entities[i].phase = PHASE_REGISTRATION;
     }
 
     return entity_list;

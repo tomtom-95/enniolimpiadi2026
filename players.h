@@ -24,17 +24,17 @@ typedef enum MedalsEnum {
     MEDAL_BRONZE = 2,
 } MedalsEnum;
 
-typedef enum TournamentState {
-    TOURNAMENT_REGISTRATION = 1 << 0,  // Players can register/unregister
-    TOURNAMENT_IN_PROGRESS  = 1 << 1,  // matches can be played
-    TOURNAMENT_KNOCKOUT     = 1 << 2,  // tournament is in the knockout phase, cannot modifies scores in groups but can update bracket
-    TOURNAMENT_FINISHED     = 1 << 3,  // tournament completed
-} TournamentState;
-
 typedef enum TournamentFormat {
-    FORMAT_SINGLE_ELIMINATION  = 0,
-    FORMAT_GROUPS_THEN_BRACKET = 1,    
+    FORMAT_KNOCKOUT,        // Pure single elimination
+    FORMAT_GROUP_KNOCKOUT,  // Groups then knockout (World Cup style)
 } TournamentFormat;
+
+typedef enum TournamentPhase {
+    PHASE_REGISTRATION,  // Players can register/unregister
+    PHASE_GROUP,         // Group phase (only valid for FORMAT_GROUP_KNOCKOUT)
+    PHASE_KNOCKOUT,      // Knockout phase, bracket matches
+    PHASE_FINISHED,      // Tournament completed
+} TournamentPhase;
 
 typedef enum MatchResult {
     MATCH_RESULT_TBD,   // The match must still be played
@@ -86,7 +86,7 @@ struct Entity {
 
     // Used only if Entity is a tournament
     u8 medals[3];
-    TournamentState state;  // Tournament phase (registration, in_progress, finished)
+    TournamentPhase phase;
     TournamentFormat format;
 
     // Tournament bracket tree (heap-style: children of i at 2*i+1 and 2*i+2)
