@@ -18,12 +18,6 @@
 #define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
 #define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
 
-typedef enum MedalsEnum {
-    MEDAL_GOLD   = 0,
-    MEDAL_SILVER = 1,
-    MEDAL_BRONZE = 2,
-} MedalsEnum;
-
 typedef enum TournamentFormat {
     FORMAT_KNOCKOUT,        // Pure single elimination
     FORMAT_GROUP_KNOCKOUT,  // Groups then knockout (World Cup style)

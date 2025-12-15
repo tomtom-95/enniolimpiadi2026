@@ -40,10 +40,16 @@ main(void)
        .height = GetScreenHeight()
     }, (Clay_ErrorHandler) { HandleClayErrors });
 
+    char *roboto = "resources/Roboto-Regular.ttf";
+    char *press_start_2p = "resources/Comic_Neue_Press_Start_2P/Press_Start_2P/PressStart2P-Regular.ttf";
+
     Font fonts[2];
-    fonts[FONT_ID_BODY_16] = LoadFontEx("resources/Roboto-Regular.ttf", 48, 0, 400);
-    fonts[FONT_ID_PRESS_START_2P] = LoadFontEx("resources/Comic_Neue_Press_Start_2P/Press_Start_2P/PressStart2P-Regular.ttf", 48, 0, 400);
+    fonts[FONT_ID_BODY_16] = LoadFontEx(roboto, 48, 0, 400);
+    fonts[FONT_ID_PRESS_START_2P] = LoadFontEx(press_start_2p, 48, 0, 400);
+
     SetTextureFilter(fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(fonts[FONT_ID_PRESS_START_2P].texture, TEXTURE_FILTER_POINT);
+
     Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
     Clay_SetDebugModeEnabled(true);
@@ -53,23 +59,23 @@ main(void)
     EntityList players = entity_list_init(arena, 64);
     EntityList tournaments = entity_list_init(arena, 64);
 
-    String8 aldo     = str8_lit("Aldo");
-    String8 giovanni = str8_lit("Giovanni");
-    String8 giacomo  = str8_lit("Giacomo");
-    String8 lucia    = str8_lit("Lucia");
-    String8 antonia  = str8_lit("Antonia");
-    String8 tommaso  = str8_lit("Tommaso");
-    String8 emilia   = str8_lit("Emilia");
-    String8 maya     = str8_lit("Maya");
-    String8 marco    = str8_lit("Marco");
-    String8 sofia    = str8_lit("Sofia");
-    String8 luca     = str8_lit("Luca");
-    String8 giulia   = str8_lit("Giulia");
-    String8 matteo   = str8_lit("Matteo");
-    String8 chiara   = str8_lit("Chiara");
-    String8 andrea   = str8_lit("Andrea");
+    String8 aldo      = str8_lit("Aldo");
+    String8 giovanni  = str8_lit("Giovanni");
+    String8 giacomo   = str8_lit("Giacomo");
+    String8 lucia     = str8_lit("Lucia");
+    String8 antonia   = str8_lit("Antonia");
+    String8 tommaso   = str8_lit("Tommaso");
+    String8 emilia    = str8_lit("Emilia");
+    String8 maya      = str8_lit("Maya");
+    String8 marco     = str8_lit("Marco");
+    String8 sofia     = str8_lit("Sofia");
+    String8 luca      = str8_lit("Luca");
+    String8 giulia    = str8_lit("Giulia");
+    String8 matteo    = str8_lit("Matteo");
+    String8 chiara    = str8_lit("Chiara");
+    String8 andrea    = str8_lit("Andrea");
     String8 francesca = str8_lit("Francesca"); 
-    String8 longname = str8_lit("sjdkfjslfjlkdsjfudskfjdskfjlskdjfkdlsjflkdjflkdj");
+    String8 longname  = str8_lit("sjdkfjslfjlkdsjfudskfjdskfjlskdjf");
 
     String8 pingpong    = str8_lit("Ping Pong");
     String8 machiavelli = str8_lit("Machiavelli");
@@ -113,16 +119,13 @@ main(void)
     entity_list_register(&players, &tournaments, matteo,   pingpong);
     entity_list_register(&players, &tournaments, chiara,   pingpong);
     entity_list_register(&players, &tournaments, longname, pingpong);
-    // entity_list_register(&players, &tournaments, andrea, pingpong);
-    // entity_list_register(&players, &tournaments, francesca, pingpong);
-
 
     // Initialization of global data
     data.arena = arena;
     data.frameArena = arena_alloc(MegaByte(1));
-    data.selectedHeaderButton = 0;
     data.yOffset = 0;
     data.fonts = fonts;
+
     data.players = players;
     data.tournaments = tournaments;
     data.chartZoomLevel = 1.0f;

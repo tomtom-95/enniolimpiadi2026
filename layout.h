@@ -17,11 +17,6 @@ struct TextInput {
     float blinkTimer;
 };
 
-typedef struct {
-    intptr_t offset;
-    intptr_t memory;
-} ClayVideoDemo_Arena;
-
 typedef enum Page
 {
     PAGE_Dashboard = 0,
@@ -49,6 +44,17 @@ typedef enum TextBoxEnum
 }
 TextBoxEnum;
 
+typedef enum ConfirmationModal
+{
+    MODAL_NULL = 0,
+
+    MODAL_DELETE_TOURNAMENT,
+    MODAL_DELETE_PLAYER,
+    MODAL_RETURN_TO_REGISTRATION,
+    MODAL_RETURN_TO_GROUP_PHASE
+}
+ConfirmationModal;
+
 static const char *TextBoxInputIds[] = {
 #define X(name, input_id, scroll_id) input_id,
     TEXTBOX_LIST
@@ -62,8 +68,8 @@ static const char *TextBoxScrollIds[] = {
 };
 
 
-typedef struct ClayVideoDemo_Data ClayVideoDemo_Data;
-struct ClayVideoDemo_Data {
+typedef struct LayoutData LayoutData;
+struct LayoutData {
     Arena *arena;      // Persistent arena for allocations
     Arena *frameArena; // Per-frame temporary arena
     float yOffset;
@@ -76,8 +82,6 @@ struct ClayVideoDemo_Data {
     EntityList players;
     EntityList tournaments;
 
-    MedalsEnum medals[MAX_NUM_ENTITIES];
-
     // Text inputs
     TextBoxEnum focusedTextbox;
     TextInput textInputs[TEXTBOX_COUNT];
@@ -88,28 +92,25 @@ struct ClayVideoDemo_Data {
     // Zoom state for tournament chart
     float chartZoomLevel;
 
-    // Confirmation dialog for returning to registration
-    bool showReturnToRegistrationConfirm;
+    // Active modal (MODAL_NULL = no modal)
+    ConfirmationModal confirmationModal;
 
-    // Confirmation dialog for returning to group phase
-    bool showReturnToGroupPhaseConfirm;
-
-    // Confirmation dialog for deleting a tournament
-    bool showDeleteTournamentConfirm;
+    // Data for delete tournament modal
     u32 deleteTournamentIdx;
 
     // Inline rename state for events (0 = not renaming)
     u32 renamingEventIdx;
 
-    // Confirmation dialog for deleting a player
-    bool showDeletePlayerConfirm;
+    // Data for delete player modal
     u32 deletePlayerIdx;
 
     // Inline rename state for players (0 = not renaming)
     u32 renamingPlayerIdx;
 
-    // Score registration modal state
-    bool showScoreModal;
+    // Whether or not are we changing score
+    bool modalScoreActive;
+
+    // Data for score registration modal
     u32 scoreModalGroupIdx;
     u32 scoreModalRowIdx;   // row player slot index
     u32 scoreModalColIdx;   // column player slot index
@@ -118,10 +119,6 @@ struct ClayVideoDemo_Data {
     double lastClickTime;
     u32 lastClickCellId;
 };
-
-typedef struct {
-    int32_t requestedDocumentIndex;
-} SidebarClickData;
 
 typedef enum
 {
@@ -152,37 +149,5 @@ typedef struct
         CustomLayoutElement_BracketConnections bracketConnections;
     } customData;
 } CustomLayoutElement;
-
-// // Utility Functions
-// Clay_String str8_to_clay(String8 str);
-// 
-// // Event Handlers
-// void HandleHeaderButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData);
-// void HandleEventElementInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData);
-// void HandleGoBack(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData);
-// void HandleTextInputHover(Clay_ElementId elementId, Clay_PointerData pointerData, intptr_t userData);
-// 
-// // Texbox functions
-// void TextInput_ProcessKeyboard(TextInput *input);
-// void TextInput_HandleClick(TextInput *input, Clay_BoundingBox inputBox, Font *fonts, int fontId);
-// void TextInput_Render(TextInput *input, Clay_String elementId, Clay_String scrollId, Clay_String placeholder, Font *fonts, int fontId);
-// void TextInput_RenderCursor(TextInput *input, Clay_BoundingBox inputBox, Clay_ScrollContainerData scrollData, Font *fonts, int fontId);
-// 
-// // Layout functions
-// void RenderHeaderButton(Clay_String text, Page page);
-// void RenderDashboard(void);
-// void RenderEventsActionsButtons(void);
-// void RenderMatchSlot(Clay_String player1_name, Clay_String player2_name, bool player1_is_tbd, bool player2_is_tbd, u32 match_id);
-// void RenderByeSlot(u32 match_id);
-// void RenderTournamentChart(u32 tournament_idx);
-// void RenderEvents(void);
-// void RenderPlayers(void);
-// void RenderResults(void);
-//
-// Clay_RenderCommandArray CreateLayout(void);
-
-// Draws bezier curves connecting match slots in single elimination brackets
-// Call this after CreateLayout() and Clay_Raylib_Render(), between BeginDrawing/EndDrawing
-// void DrawBracketConnections(void);
 
 #endif // LAYOUT_H

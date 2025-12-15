@@ -234,19 +234,6 @@ entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, Stri
     tournament_populate_bracket_from_groups(entity2);
 }
 
-void
-assign_medal(EntityList *players, EntityList *tournaments,
-    String8 player_name, String8 tournament_name, MedalsEnum medal)
-{
-    u32 player_idx = entity_list_find(players, player_name);
-    assert(player_idx != players->len + 1);
-
-    u32 tournament_idx = entity_list_find(tournaments, tournament_name);
-    assert(tournament_idx != tournaments->len + 1);
-
-    (tournaments->entities + tournament_idx)->medals[medal] = player_idx;
-}
-
 /**
  * Construct the tournament bracket from registered players.
  *
