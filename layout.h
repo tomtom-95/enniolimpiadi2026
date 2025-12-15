@@ -55,6 +55,16 @@ typedef enum ConfirmationModal
 }
 ConfirmationModal;
 
+typedef enum DuplicateWarning
+{
+    DUPLICATE_NONE = 0,
+    DUPLICATE_PLAYER_ADD,
+    DUPLICATE_EVENT_ADD,
+    DUPLICATE_PLAYER_RENAME,
+    DUPLICATE_EVENT_RENAME,
+}
+DuplicateWarning;
+
 static const char *TextBoxInputIds[] = {
 #define X(name, input_id, scroll_id) input_id,
     TEXTBOX_LIST
@@ -119,11 +129,8 @@ struct LayoutData {
     double lastClickTime;
     u32 lastClickCellId;
 
-    // Duplicate name warning flags (shown until user interacts with textbox)
-    bool duplicatePlayerName;
-    bool duplicateEventName;
-    bool duplicatePlayerRename;
-    bool duplicateEventRename;
+    // Duplicate name warning (shown until user interacts with textbox)
+    DuplicateWarning duplicateWarning;
 };
 
 typedef enum
