@@ -285,30 +285,54 @@ HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, void *us
 void
 HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         TextInput *textInput = &data.textInputs[TEXTBOX_Events];
-        String8 eventName = str8((u8 *)textInput->buffer, textInput->len);
-        // Copy string to persistent arena so it survives after text input changes
-        String8 eventNameCopy = str8_copy(data.arena, eventName);
-        entity_list_add(&data.tournaments, eventNameCopy);
+        String8 eventName         = str8_copy(data.arena, str8((u8 *)textInput->buffer, textInput->len));
+        String8 eventNameStripped = str8_strip_whitespace(eventName);
+        if (eventNameStripped.len != 0)
+        {
+            // Check if event with this name already exists
+            u32 idx_tail = data.tournaments.len + 1;
+            u32 existing_idx = entity_list_find(&data.tournaments, eventNameStripped);
+            if (existing_idx != idx_tail)
+            {
+                // Event already exists, show warning
+                data.duplicateEventName = true;
+            }
+            else
+            {
+                entity_list_add(&data.tournaments, eventNameStripped);
+            }
+        }
     }
 }
 
 void
 HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         TextInput *textInput = &data.textInputs[TEXTBOX_Players];
-        String8 playerName = str8((u8 *)textInput->buffer, textInput->len);
-        // Copy string to persistent arena so it survives after text input changes
-        String8 playerNameCopy = str8_copy(data.arena, playerName);
-        entity_list_add(&data.players, playerNameCopy);
+        String8 playerName         = str8_copy(data.arena, str8((u8 *)textInput->buffer, textInput->len));
+        String8 playerNameStripped = str8_strip_whitespace(playerName);
+        if (playerNameStripped.len != 0)
+        {
+            // Check if player with this name already exists
+            u32 idx_tail = data.players.len + 1;
+            u32 existing_idx = entity_list_find(&data.players, playerNameStripped);
+            if (existing_idx != idx_tail)
+            {
+                // Player already exists, show warning
+                data.duplicatePlayerName = true;
+            }
+            else
+            {
+                entity_list_add(&data.players, playerNameStripped);
+            }
+        }
     }
 }
 
@@ -577,7 +601,6 @@ HandleStartRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, v
 void
 HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)userData;
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
@@ -589,12 +612,24 @@ HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData,
             {
                 // NOTE: this is a memory leak but who cares
                 String8 new_name = str8_copy(data.arena, str8((u8 *)input->buffer, input->len));
+
+                // Check if another event with this name already exists
+                u32 idx_tail = data.tournaments.len + 1;
+                u32 existing_idx = entity_list_find(&data.tournaments, new_name);
+                if (existing_idx != idx_tail && existing_idx != data.renamingEventIdx)
+                {
+                    // Event already exists, show warning
+                    data.duplicateEventRename = true;
+                    return;
+                }
+
                 entity_list_rename(&data.tournaments, data.renamingEventIdx, new_name);
             }
 
             // Clear rename state
             data.renamingEventIdx = 0;
             data.focusedTextbox = TEXTBOX_NULL;
+            data.duplicateEventRename = false;
         }
     }
 }
@@ -608,6 +643,7 @@ HandleCancelRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, 
     {
         data.renamingEventIdx = 0;
         data.focusedTextbox = TEXTBOX_NULL;
+        data.duplicateEventRename = false;
     }
 }
 
@@ -653,12 +689,24 @@ HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData
             {
                 // NOTE: this is a memory leak but who cares
                 String8 new_name = str8_copy(data.arena, str8((u8 *)input->buffer, input->len));
+
+                // Check if another player with this name already exists
+                u32 idx_tail = data.players.len + 1;
+                u32 existing_idx = entity_list_find(&data.players, new_name);
+                if (existing_idx != idx_tail && existing_idx != data.renamingPlayerIdx)
+                {
+                    // Player already exists, show warning
+                    data.duplicatePlayerRename = true;
+                    return;
+                }
+
                 entity_list_rename(&data.players, data.renamingPlayerIdx, new_name);
             }
 
             // Clear rename state
             data.renamingPlayerIdx = 0;
             data.focusedTextbox = TEXTBOX_NULL;
+            data.duplicatePlayerRename = false;
         }
     }
 }
@@ -672,6 +720,7 @@ HandleCancelRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData,
     {
         data.renamingPlayerIdx = 0;
         data.focusedTextbox = TEXTBOX_NULL;
+        data.duplicatePlayerRename = false;
     }
 }
 
@@ -891,6 +940,12 @@ TextInput_ProcessKeyboard(TextInput *input)
     int key = GetCharPressed();
     while (key > 0)
     {
+        // Clear duplicate warnings when user types
+        data.duplicatePlayerName = false;
+        data.duplicateEventName = false;
+        data.duplicatePlayerRename = false;
+        data.duplicateEventRename = false;
+
         // TODO: this must be refactored when I want to really get a good textbox done
         if (key >= 32 && key <= 125 && input->len < TEXT_INPUT_MAX_LEN - 1)
         {
@@ -938,6 +993,11 @@ TextInput_ProcessKeyboard(TextInput *input)
 
     // Handle backspace - delete character before cursor
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
+        // Clear duplicate warnings when user deletes
+        data.duplicatePlayerName = false;
+        data.duplicateEventName = false;
+        data.duplicatePlayerRename = false;
+        data.duplicateEventRename = false;
         if (input->cursorPos > 0) {
             for (u32 i = input->cursorPos - 1; i < input->len - 1; i++) {
                 input->buffer[i] = input->buffer[i + 1];
@@ -951,6 +1011,11 @@ TextInput_ProcessKeyboard(TextInput *input)
 
     // Handle delete - delete character at cursor
     if (IsKeyPressed(KEY_DELETE) || IsKeyPressedRepeat(KEY_DELETE)) {
+        // Clear duplicate warnings when user deletes
+        data.duplicatePlayerName = false;
+        data.duplicateEventName = false;
+        data.duplicatePlayerRename = false;
+        data.duplicateEventRename = false;
         if (input->cursorPos < input->len) {
             for (u32 i = input->cursorPos; i < input->len - 1; i++) {
                 input->buffer[i] = input->buffer[i + 1];
@@ -3312,6 +3377,35 @@ RenderEventsHeader(void)
             TextInput_Render(TEXTBOX_Events, CLAY_STRING("EventNameInput"),
                 CLAY_STRING("EventNameInputScroll"), CLAY_STRING("Enter event name..."));
 
+            // Show duplicate name warning
+            if (data.duplicateEventName)
+            {
+                CLAY(CLAY_ID("DuplicateEventWarning"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 6, 6, 4, 4 }
+                    },
+                    .backgroundColor = { 255, 240, 240, 255 },
+                    .cornerRadius = CLAY_CORNER_RADIUS(4),
+                    .border = { .width = {1, 1, 1, 1}, .color = COLOR_RED },
+                    .floating = {
+                        .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+                        .parentId = Clay_GetElementId(CLAY_STRING("EventNameInput")).id,
+                        .attachPoints = {
+                            .element = CLAY_ATTACH_POINT_LEFT_TOP,
+                            .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM
+                        },
+                        .offset = { 0, 4 }
+                    }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("Event already exists"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = COLOR_RED
+                    }));
+                }
+            }
+
             // Add button
             CLAY(CLAY_ID("AddEventButton"), {
                 .layout = {
@@ -3620,6 +3714,35 @@ RenderPlayersHeader(void)
             // Render text input
             TextInput_Render(TEXTBOX_Players, CLAY_STRING("PlayerNameInput"),
                 CLAY_STRING("PlayerNameInputScroll"), CLAY_STRING("Enter player name..."));
+
+            // Show duplicate name warning
+            if (data.duplicatePlayerName)
+            {
+                CLAY(CLAY_ID("DuplicatePlayerWarning"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 6, 6, 4, 4 }
+                    },
+                    .backgroundColor = { 255, 240, 240, 255 },
+                    .cornerRadius = CLAY_CORNER_RADIUS(4),
+                    .border = { .width = {1, 1, 1, 1}, .color = COLOR_RED },
+                    .floating = {
+                        .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+                        .parentId = Clay_GetElementId(CLAY_STRING("PlayerNameInput")).id,
+                        .attachPoints = {
+                            .element = CLAY_ATTACH_POINT_LEFT_TOP,
+                            .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM
+                        },
+                        .offset = { 0, 4 }
+                    }
+                }) {
+                    CLAY_TEXT(CLAY_STRING("Player already exists"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = COLOR_RED
+                    }));
+                }
+            }
 
             // Add button
             CLAY(CLAY_ID("AddPlayerButton"), {
@@ -4120,11 +4243,69 @@ RenderRenameModal(void)
             {
                 TextInput_Render(TEXTBOX_EventRename, CLAY_STRING("EventRenameInput"),
                     CLAY_STRING("EventRenameInputScroll"), CLAY_STRING("Enter new name..."));
+
+                // Show duplicate name warning for event rename
+                if (data.duplicateEventRename)
+                {
+                    CLAY(CLAY_ID("DuplicateEventRenameWarning"), {
+                        .layout = {
+                            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                            .padding = { 6, 6, 4, 4 }
+                        },
+                        .backgroundColor = { 255, 240, 240, 255 },
+                        .cornerRadius = CLAY_CORNER_RADIUS(4),
+                        .border = { .width = {1, 1, 1, 1}, .color = COLOR_RED },
+                        .floating = {
+                            .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+                            .parentId = Clay_GetElementId(CLAY_STRING("EventRenameInput")).id,
+                            .attachPoints = {
+                                .element = CLAY_ATTACH_POINT_LEFT_TOP,
+                                .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM
+                            },
+                            .offset = { 0, 4 }
+                        }
+                    }) {
+                        CLAY_TEXT(CLAY_STRING("Event already exists"), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 12,
+                            .textColor = COLOR_RED
+                        }));
+                    }
+                }
             }
             else
             {
                 TextInput_Render(TEXTBOX_PlayerRename, CLAY_STRING("PlayerRenameInput"),
                     CLAY_STRING("PlayerRenameInputScroll"), CLAY_STRING("Enter new name..."));
+
+                // Show duplicate name warning for player rename
+                if (data.duplicatePlayerRename)
+                {
+                    CLAY(CLAY_ID("DuplicatePlayerRenameWarning"), {
+                        .layout = {
+                            .sizing = {.width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0)},
+                            .padding = { 6, 6, 4, 4 }
+                        },
+                        .backgroundColor = { 255, 240, 240, 255 },
+                        .cornerRadius = CLAY_CORNER_RADIUS(4),
+                        .border = { .width = {1, 1, 1, 1}, .color = COLOR_RED },
+                        .floating = {
+                            .attachTo = CLAY_ATTACH_TO_ELEMENT_WITH_ID,
+                            .parentId = Clay_GetElementId(CLAY_STRING("PlayerRenameInput")).id,
+                            .attachPoints = {
+                                .element = CLAY_ATTACH_POINT_LEFT_TOP,
+                                .parent = CLAY_ATTACH_POINT_LEFT_BOTTOM
+                            },
+                            .offset = { 0, 4 }
+                        }
+                    }) {
+                        CLAY_TEXT(CLAY_STRING("Player already exists"), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_BODY_16,
+                            .fontSize = 12,
+                            .textColor = COLOR_RED
+                        }));
+                    }
+                }
             }
 
             // Buttons row

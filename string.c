@@ -61,6 +61,37 @@ str8_cmp(String8 s1, String8 s2)
 }
 
 String8
+str8_strip_whitespace(String8 s)
+{
+    u64 start;
+    u64 stop;
+
+    // Handle empty string
+    if (s.len == 0)
+        return s;
+
+    for (start = 0; start < s.len; ++start)
+    {
+        u8 ch = s.str[start];
+        if (ch != ' ' && ch != '\t' && ch != '\n')
+            break;
+    }
+
+    for (stop = s.len; stop > 0; --stop)
+    {
+        u8 ch = s.str[stop - 1];
+        if (ch != ' ' && ch != '\t' && ch != '\n')
+            break;
+    }
+
+    // If all whitespace, return empty string
+    if (start >= stop)
+        return str8(s.str, 0);
+
+    return str8(s.str + start, stop - start);
+}
+
+String8
 str8_u32(Arena *arena, u32 num)
 {
     String8 result;

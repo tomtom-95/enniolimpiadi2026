@@ -18,6 +18,7 @@ struct String8 {
 String8 str8(u8 *str, u64 len);
 String8 str8_cat(Arena *arena, String8 s1, String8 s2);
 String8 str8_copy(Arena *arena, String8 s);
+String8 str8_strip_whitespace(String8 s);
 
 bool str8_cmp(String8 s1, String8 s2);
 

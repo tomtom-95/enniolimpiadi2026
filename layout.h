@@ -118,6 +118,12 @@ struct LayoutData {
     // Double-click tracking
     double lastClickTime;
     u32 lastClickCellId;
+
+    // Duplicate name warning flags (shown until user interacts with textbox)
+    bool duplicatePlayerName;
+    bool duplicateEventName;
+    bool duplicatePlayerRename;
+    bool duplicateEventRename;
 };
 
 typedef enum
