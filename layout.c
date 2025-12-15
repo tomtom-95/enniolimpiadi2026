@@ -252,13 +252,6 @@ HandleZoomableHover(Clay_ElementId elementId, Clay_PointerData pointerData, void
     }
 }
 
-// void
-// HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
-// {
-//     (void)userData;
-//     HandleZoomableHover(elementId, pointerData, &data.chartZoomLevel);
-// }
-
 void
 HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
