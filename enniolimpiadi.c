@@ -129,6 +129,7 @@ main(void)
     data.players = players;
     data.tournaments = tournaments;
     data.chartZoomLevel = 1.0f;
+    data.groupMatrixZoomLevel = 1.0f;
 
     while (!WindowShouldClose())
     {

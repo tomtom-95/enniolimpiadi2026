@@ -229,10 +229,10 @@ HandleOuterContainerInteraction(Clay_ElementId elementId, Clay_PointerData point
 }
 
 void
-HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+HandleZoomableHover(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)userData;
-    // Handle zoom with Cmd+/Cmd- while hovering over chart
+    float *zoomLevel = (float *)userData;
+    // Handle zoom with Cmd+/Cmd- while hovering over zoomable area
     bool cmdPressed = IsKeyDown(KEY_LEFT_SUPER) || IsKeyDown(KEY_RIGHT_SUPER);
 
     if (cmdPressed)
@@ -240,17 +240,24 @@ HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, void *u
         if (IsKeyPressed(KEY_RIGHT_BRACKET)) // Which is actually the "+" on the Mac with italian keyboard layout
         {
             // Zoom in (Cmd +)
-            data.chartZoomLevel += 0.1f;
-            if (data.chartZoomLevel > 3.0f) data.chartZoomLevel = 3.0f;
+            *zoomLevel += 0.1f;
+            if (*zoomLevel > 3.0f) *zoomLevel = 3.0f;
         }
         if (IsKeyPressed(KEY_SLASH)) // Which is actually the "-" on the Mac with italian keyboard layout
         {
             // Zoom out (Cmd -)
-            data.chartZoomLevel -= 0.1f;
-            if (data.chartZoomLevel < 0.5f) data.chartZoomLevel = 0.5f;
+            *zoomLevel -= 0.1f;
+            if (*zoomLevel < 0.5f) *zoomLevel = 0.5f;
         }
     }
 }
+
+// void
+// HandleChartHover(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+// {
+//     (void)userData;
+//     HandleZoomableHover(elementId, pointerData, &data.chartZoomLevel);
+// }
 
 void
 HandleTextInput(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
@@ -2630,6 +2637,8 @@ RenderKnockoutChart(u8 *bracket, u32 num_players)
         },
         .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
     }) {
+        Clay_OnHover(HandleZoomableHover, &data.chartZoomLevel);
+
         static CustomLayoutElement bracketConnectionsElement;
         bracketConnectionsElement.type = CUSTOM_LAYOUT_ELEMENT_TYPE_BRACKET_CONNECTIONS;
         bracketConnectionsElement.customData.bracketConnections.num_players = num_players;
@@ -2748,9 +2757,14 @@ RenderKnockoutChart(u8 *bracket, u32 num_players)
 void
 RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
 {
-    // TODO (not now): I should implement zooming here similar to the one done in bracket
-    //                 can it be refactor into a general zooming function for a given clay
-    //                 element?
+    float zoom = data.groupMatrixZoomLevel;
+    u16 cellWidth = (u16)(100 * zoom);
+    u16 cellGap = (u16)(4 * zoom);
+    u16 padH = (u16)(8 * zoom);
+    u16 padV = (u16)(10 * zoom);
+    u16 cornerRad = (u16)(8 * zoom);
+    u16 fontSizeSmall = (u16)(12 * zoom);
+    u16 fontSizeMed = (u16)(14 * zoom);
 
     Clay_Color groupAccent = groupAccentColors[group_idx % ArrayCount(groupAccentColors)];
 
@@ -2758,30 +2772,32 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-            .childGap = 4
+            .childGap = cellGap
         }
     }) {
+        Clay_OnHover(HandleZoomableHover, &data.groupMatrixZoomLevel);
+
         // Header row with player names as columns
         CLAY(CLAY_IDI("MatrixHeaderRow", group_idx), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-                .childGap = 4
+                .childGap = cellGap
             }
         }) {
             // Empty corner cell
             CLAY(CLAY_IDI("MatrixCorner", group_idx), {
                 .layout = {
-                    .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
-                    .padding = { 8, 8, 10, 10 },
+                    .sizing = { .width = CLAY_SIZING_FIXED(cellWidth), .height = CLAY_SIZING_FIT(0) },
+                    .padding = { padH, padH, padV, padV },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                 },
                 .backgroundColor = groupAccent,
-                .cornerRadius = CLAY_CORNER_RADIUS(8)
+                .cornerRadius = CLAY_CORNER_RADIUS(cornerRad)
             }) {
                 CLAY_TEXT(CLAY_STRING("vs"), CLAY_TEXT_CONFIG({
                     .fontId = FONT_ID_BODY_16,
-                    .fontSize = 12,
+                    .fontSize = fontSizeSmall,
                     .textColor = COLOR_WHITE
                 }));
             }
@@ -2796,16 +2812,16 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                     u32 header_id = group_idx * MAX_GROUP_SIZE * 2 + col;
                     CLAY(CLAY_IDI("MatrixColHeader", header_id), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
-                            .padding = { 8, 8, 10, 10 },
+                            .sizing = { .width = CLAY_SIZING_FIXED(cellWidth), .height = CLAY_SIZING_FIT(0) },
+                            .padding = { padH, padH, padV, padV },
                             .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                         },
                         .backgroundColor = groupAccent,
-                        .cornerRadius = CLAY_CORNER_RADIUS(8)
+                        .cornerRadius = CLAY_CORNER_RADIUS(cornerRad)
                     }) {
                         CLAY_TEXT(str8_to_clay_truncated(data.frameArena, player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
-                            .fontSize = 14,
+                            .fontSize = fontSizeMed,
                             .textColor = COLOR_WHITE
                         }));
                     }
@@ -2826,22 +2842,22 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                     .layout = {
                         .layoutDirection = CLAY_LEFT_TO_RIGHT,
                         .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-                        .childGap = 4
+                        .childGap = cellGap
                     }
                 }) {
                     // Row header (player name) with accent background
                     CLAY(CLAY_IDI("MatrixRowHeader", row_id), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
-                            .padding = { 10, 10, 10, 10 },
+                            .sizing = { .width = CLAY_SIZING_FIXED(cellWidth), .height = CLAY_SIZING_FIT(0) },
+                            .padding = { padV, padV, padV, padV },
                             .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_CENTER }
                         },
                         .backgroundColor = groupAccent,
-                        .cornerRadius = CLAY_CORNER_RADIUS(8)
+                        .cornerRadius = CLAY_CORNER_RADIUS(cornerRad)
                     }) {
                         CLAY_TEXT(str8_to_clay_truncated(data.frameArena, row_player->name, MAX_DISPLAY_NAME_LEN), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
-                            .fontSize = 14,
+                            .fontSize = fontSizeMed,
                             .textColor = COLOR_WHITE
                         }));
                     }
@@ -2860,19 +2876,19 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
 
                             CLAY(CLAY_IDI("MatrixCell", cell_id), {
                                 .layout = {
-                                    .sizing = { .width = CLAY_SIZING_FIXED(100), .height = CLAY_SIZING_FIT(0) },
-                                    .padding = { 8, 8, 10, 10 },
+                                    .sizing = { .width = CLAY_SIZING_FIXED(cellWidth), .height = CLAY_SIZING_FIT(0) },
+                                    .padding = { padH, padH, padV, padV },
                                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
                                 },
                                 .backgroundColor = (_showHover && Clay_Hovered()) ? dashAccentTeal : cell_bg_normal,
-                                .cornerRadius = CLAY_CORNER_RADIUS(8)
+                                .cornerRadius = CLAY_CORNER_RADIUS(cornerRad)
                             }) {
                                 // Diagonal cells (player vs self) show dash
                                 if (isDiagonal)
                                 {
                                     CLAY_TEXT(CLAY_STRING("-"), CLAY_TEXT_CONFIG({
                                         .fontId = FONT_ID_BODY_16,
-                                        .fontSize = 14,
+                                        .fontSize = fontSizeMed,
                                         .textColor = matchVsColor
                                     }));
                                 }
@@ -2902,7 +2918,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                                         String8 res = str8_cat(data.frameArena, str8_cat(data.frameArena, str8_row_score, separator), str8_col_score);
                                         CLAY_TEXT(str8_to_clay(res), CLAY_TEXT_CONFIG({
                                             .fontId = FONT_ID_BODY_16,
-                                            .fontSize = 14,
+                                            .fontSize = fontSizeMed,
                                             .textColor = (_showHover && Clay_Hovered())  ? COLOR_WHITE : dashAccentTeal
                                         }));
                                     }
@@ -2911,7 +2927,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                                         // No score yet - show TBD
                                         CLAY_TEXT(CLAY_STRING("TBD"), CLAY_TEXT_CONFIG({
                                             .fontId = FONT_ID_BODY_16,
-                                            .fontSize = 14,
+                                            .fontSize = fontSizeMed,
                                             .textColor = (_showHover && Clay_Hovered()) ? COLOR_WHITE : dashAccentPurple
                                         }));
                                     }
@@ -3212,7 +3228,6 @@ RenderTournamentRightPanel(u32 tournament_idx)
             .cornerRadius = { 0, 0, 12, 12 },
             // .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
-            Clay_OnHover(HandleChartHover, NULL);
             Entity *tournament = data.tournaments.entities + tournament_idx;
 
             // Get the number of players in the tournament

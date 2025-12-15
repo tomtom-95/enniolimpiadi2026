@@ -101,6 +101,7 @@ struct LayoutData {
 
     // Zoom state for tournament chart
     float chartZoomLevel;
+    float groupMatrixZoomLevel;
 
     // Active modal (MODAL_NULL = no modal)
     ConfirmationModal confirmationModal;
