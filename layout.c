@@ -232,6 +232,7 @@ void
 HandleZoomableHover(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
     float *zoomLevel = (float *)userData;
+
     // Handle zoom with Cmd+/Cmd- while hovering over zoomable area
     bool cmdPressed = IsKeyDown(KEY_LEFT_SUPER) || IsKeyDown(KEY_RIGHT_SUPER);
 
@@ -241,13 +242,19 @@ HandleZoomableHover(Clay_ElementId elementId, Clay_PointerData pointerData, void
         {
             // Zoom in (Cmd +)
             *zoomLevel += 0.1f;
-            if (*zoomLevel > 3.0f) *zoomLevel = 3.0f;
+            if (*zoomLevel > 3.0f)
+            {
+                *zoomLevel = 3.0f;
+            }
         }
         if (IsKeyPressed(KEY_SLASH)) // Which is actually the "-" on the Mac with italian keyboard layout
         {
             // Zoom out (Cmd -)
             *zoomLevel -= 0.1f;
-            if (*zoomLevel < 0.5f) *zoomLevel = 0.5f;
+            if (*zoomLevel < 0.5f)
+            {
+                *zoomLevel = 0.5f;
+            }
         }
     }
 }
@@ -344,7 +351,7 @@ HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData poin
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        TextInput *textInput = &data.textInputs[TEXTBOX_Players];
+        TextInput *textInput       = &data.textInputs[TEXTBOX_Players];
         String8 playerName         = str8_copy(data.arena, str8((u8 *)textInput->buffer, textInput->len));
         String8 playerNameStripped = str8_strip_whitespace(playerName);
         if (playerNameStripped.len != 0)
@@ -1320,7 +1327,7 @@ RenderDashboard(void)
                         .textColor = dashLabelText
                     }));
                     u32 tournaments_count = entity_list_count(&data.tournaments);
-                    String8 tournaments_count_str8 = str8_u32(data.frameArena, tournaments_count);
+                    String8 tournaments_count_str8 = str8_from_u32(data.frameArena, tournaments_count);
                     Clay_String tournaments_count_clay = str8_to_clay(tournaments_count_str8);
                     CLAY_TEXT(tournaments_count_clay, CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_PRESS_START_2P,
@@ -1362,7 +1369,7 @@ RenderDashboard(void)
                         .textColor = dashLabelText
                     }));
                     u32 players_count = entity_list_count(&data.players);
-                    String8 players_count_str8 = str8_u32(data.frameArena, players_count);
+                    String8 players_count_str8 = str8_from_u32(data.frameArena, players_count);
                     Clay_String players_count_clay = str8_to_clay(players_count_str8);
                     CLAY_TEXT(players_count_clay, CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_PRESS_START_2P,
@@ -1768,7 +1775,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                             }));
                         }
                         // Value
-                        String8 size_str = str8_u32(data.frameArena, tournament->group_phase.group_size);
+                        String8 size_str = str8_from_u32(data.frameArena, tournament->group_phase.group_size);
                         CLAY_TEXT(str8_to_clay(size_str), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_PRESS_START_2P,
                             .fontSize = 20,
@@ -1853,7 +1860,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                             }));
                         }
                         // Value
-                        String8 advance_str = str8_u32(data.frameArena, tournament->group_phase.advance_per_group);
+                        String8 advance_str = str8_from_u32(data.frameArena, tournament->group_phase.advance_per_group);
                         CLAY_TEXT(str8_to_clay(advance_str), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_PRESS_START_2P,
                             .fontSize = 20,
@@ -1927,7 +1934,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
             .backgroundColor = COLOR_WHITE,
             .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
-            String8 count_str = str8_u32(data.frameArena, registered_count);
+            String8 count_str = str8_from_u32(data.frameArena, registered_count);
             CLAY_TEXT(str8_to_clay(count_str), CLAY_TEXT_CONFIG({
                 .fontId = FONT_ID_BODY_16,
                 .fontSize = 10,
@@ -1983,7 +1990,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
                     .backgroundColor = dashAccentTeal,
                     .cornerRadius = CLAY_CORNER_RADIUS(10)
                 }) {
-                    String8 num_str = str8_u32(data.frameArena, i + 1);
+                    String8 num_str = str8_from_u32(data.frameArena, i + 1);
                     CLAY_TEXT(str8_to_clay(num_str), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_BODY_16,
                         .fontSize = 10,
@@ -2213,7 +2220,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                         .fontSize = 10,
                         .textColor = dashLabelText
                     }));
-                    String8 size_str = str8_u32(data.frameArena, tournament->group_phase.group_size);
+                    String8 size_str = str8_from_u32(data.frameArena, tournament->group_phase.group_size);
                     CLAY_TEXT(str8_to_clay(size_str), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 24,
@@ -2255,7 +2262,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                         .fontSize = 10,
                         .textColor = dashLabelText
                     }));
-                    String8 advance_str = str8_u32(data.frameArena, tournament->group_phase.advance_per_group);
+                    String8 advance_str = str8_from_u32(data.frameArena, tournament->group_phase.advance_per_group);
                     CLAY_TEXT(str8_to_clay(advance_str), CLAY_TEXT_CONFIG({
                         .fontId = FONT_ID_PRESS_START_2P,
                         .fontSize = 24,
@@ -2328,7 +2335,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                         .backgroundColor = dashAccentPurple,
                         .cornerRadius = CLAY_CORNER_RADIUS(10)
                     }) {
-                        String8 num_str = str8_u32(data.frameArena, i + 1);
+                        String8 num_str = str8_from_u32(data.frameArena, i + 1);
                         CLAY_TEXT(str8_to_clay(num_str), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 10,
@@ -2905,8 +2912,8 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                                     if (hasScore)
                                     {
                                         // Display score as "X - Y"
-                                        String8 str8_row_score = str8_u32(data.frameArena, (u32)score.row_score);
-                                        String8 str8_col_score = str8_u32(data.frameArena, (u32)score.col_score);
+                                        String8 str8_row_score = str8_from_u32(data.frameArena, (u32)score.row_score);
+                                        String8 str8_col_score = str8_from_u32(data.frameArena, (u32)score.col_score);
                                         String8 separator = str8_lit_comp(" - ");
                                         String8 res = str8_cat(data.frameArena, str8_cat(data.frameArena, str8_row_score, separator), str8_col_score);
                                         CLAY_TEXT(str8_to_clay(res), CLAY_TEXT_CONFIG({
@@ -3066,7 +3073,7 @@ RenderGroupsKnockoutChart(Entity *tournament)
                                 .cornerRadius = CLAY_CORNER_RADIUS(8)
                             }) {
                                 String8 group_prefix = str8_lit("GROUP ");
-                                String8 group_num = str8_u32(data.frameArena, g + 1);
+                                String8 group_num = str8_from_u32(data.frameArena, g + 1);
                                 String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
                                 CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
                                     .fontId = FONT_ID_PRESS_START_2P,
@@ -3544,7 +3551,7 @@ RenderEventsList(void)
                     }) {
                         s32 positions[64];
                         u32 count = find_all_filled_slots(tournament->registrations, positions);
-                        CLAY_TEXT(str8_to_clay(str8_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(str8_to_clay(str8_from_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_PRESS_START_2P,
                             .fontSize = 24,
                             .textColor = dashAccentTeal
@@ -3860,7 +3867,7 @@ RenderPlayersList(void)
                     }) {
                         s32 positions[64];
                         u32 count = find_all_filled_slots(player->registrations, positions);
-                        CLAY_TEXT(str8_to_clay(str8_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(str8_to_clay(str8_from_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_PRESS_START_2P,
                             .fontSize = 24,
                             .textColor = dashAccentTeal
@@ -4374,7 +4381,7 @@ RenderRegisterScoreModal(void)
 
             // Match info badge (Group X)
             String8 group_prefix = str8_lit("GROUP ");
-            String8 group_num = str8_u32(data.frameArena, data.scoreModalGroupIdx + 1);
+            String8 group_num = str8_from_u32(data.frameArena, data.scoreModalGroupIdx + 1);
             String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
             CLAY(CLAY_ID("ScoreGroupBadge"), {
                 .layout = {

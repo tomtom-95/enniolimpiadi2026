@@ -67,7 +67,7 @@ test_str8_constructor(void)
 {
     char *cstr = "Hello";
 
-    String8 str = str8_cstr(cstr);
+    String8 str = str8_from_cstr(cstr);
 }
 
 void

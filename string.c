@@ -36,7 +36,7 @@ str8_cat(Arena *arena, String8 s1, String8 s2)
 }
 
 String8
-str8_cstr(char *c)
+str8_from_cstr(char *c)
 {
     return (String8){(u8*)c, cstr8_len((u8*)c)};
 }
@@ -92,7 +92,7 @@ str8_strip_whitespace(String8 s)
 }
 
 String8
-str8_u32(Arena *arena, u32 num)
+str8_from_u32(Arena *arena, u32 num)
 {
     String8 result;
 
