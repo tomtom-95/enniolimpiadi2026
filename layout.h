@@ -88,6 +88,7 @@ struct LayoutData {
     Page selectedHeaderButton;
 
     u8 selectedTournamentIdx;
+    u8 selectedPlayerIdx;
 
     EntityList players;
     EntityList tournaments;
