@@ -12,6 +12,9 @@
 #include "layout.c"
 #include "raylib/clay_renderer_raylib.c"
 
+#include "resources/roboto_font.h"
+#include "resources/press_start_2p_font.h"
+
 
 void
 HandleClayErrors(Clay_ErrorData errorData)
@@ -40,12 +43,9 @@ main(void)
        .height = GetScreenHeight()
     }, (Clay_ErrorHandler) { HandleClayErrors });
 
-    char *roboto = "resources/Roboto-Regular.ttf";
-    char *press_start_2p = "resources/Comic_Neue_Press_Start_2P/Press_Start_2P/PressStart2P-Regular.ttf";
-
     Font fonts[2];
-    fonts[FONT_ID_BODY_16] = LoadFontEx(roboto, 48, 0, 400);
-    fonts[FONT_ID_PRESS_START_2P] = LoadFontEx(press_start_2p, 48, 0, 400);
+    fonts[FONT_ID_BODY_16] = LoadFontFromMemory(".ttf", __Roboto_Regular_ttf, __Roboto_Regular_ttf_len, 48, 0, 400);
+    fonts[FONT_ID_PRESS_START_2P] = LoadFontFromMemory(".ttf", __PressStart2P_Regular_ttf, __PressStart2P_Regular_ttf_len, 48, 0, 400);
 
     SetTextureFilter(fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(fonts[FONT_ID_PRESS_START_2P].texture, TEXTURE_FILTER_POINT);
