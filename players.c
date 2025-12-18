@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 
 #include "arena.h"
 #include "core.h"
@@ -584,4 +585,304 @@ tournament_populate_bracket_from_groups(Entity *tournament)
         fighting_start++;
         qualifier_idx++;
     }
+}
+
+// ============================================================================
+// Save/Load Implementation
+// ============================================================================
+
+#define SAVE_VERSION 2
+#define SAVE_MAGIC 0x454E4E49  // "ENNI"
+
+typedef struct SaveHeader {
+    u32 magic;
+    u32 version;
+    u32 players_len;
+    u32 players_first_free_idx;
+    u32 tournaments_len;
+    u32 tournaments_first_free_idx;
+} SaveHeader;
+
+/**
+ * Save the olympiad state to a binary file.
+ *
+ * Writes everything to a buffer first, then fwrite once.
+ */
+b32
+olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments)
+{
+    // Calculate max buffer size needed
+    // Header + (len+2) entities for both lists
+    // Each entity: nxt(4) + prv(4) + name_len(4) + name(MAX_STRING_SIZE) + registrations(8)
+    //              + medals(3) + phase(1) + format(1) + bracket(BRACKET_SIZE) + group_phase
+    u64 entity_max_size = 4 + 4 + 4 + MAX_STRING_SIZE + 8 + 3 + 1 + 1 + BRACKET_SIZE + sizeof(GroupPhase);
+    u64 players_total = players->len + 2;
+    u64 tournaments_total = tournaments->len + 2;
+    u64 max_size = sizeof(SaveHeader) + (players_total + tournaments_total) * entity_max_size;
+
+    u8 *buffer = push_array(arena, u8, max_size);
+    u64 offset = 0;
+
+    // Write header
+    SaveHeader header = {
+        .magic = SAVE_MAGIC,
+        .version = SAVE_VERSION,
+        .players_len = players->len,
+        .players_first_free_idx = players->first_free_idx,
+        .tournaments_len = tournaments->len,
+        .tournaments_first_free_idx = tournaments->first_free_idx,
+    };
+    MemoryCopy(buffer + offset, &header, sizeof(SaveHeader));
+    offset += sizeof(SaveHeader);
+
+    // Write players entities
+    for (u32 i = 0; i < players_total; ++i)
+    {
+        Entity *e = &players->entities[i];
+
+        // nxt, prv
+        MemoryCopy(buffer + offset, &e->nxt, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(buffer + offset, &e->prv, sizeof(u32)); offset += sizeof(u32);
+
+        // name_len + name
+        u32 name_len = (u32)e->name.len;
+        MemoryCopy(buffer + offset, &name_len, sizeof(u32)); offset += sizeof(u32);
+        if (name_len > 0)
+        {
+            MemoryCopy(buffer + offset, e->name.str, name_len);
+            offset += name_len;
+        }
+
+        // registrations
+        MemoryCopy(buffer + offset, &e->registrations, sizeof(u64)); offset += sizeof(u64);
+
+        // medals
+        MemoryCopy(buffer + offset, e->medals, 3); offset += 3;
+
+        // phase, format
+        u8 phase = (u8)e->phase;
+        u8 format = (u8)e->format;
+        buffer[offset++] = phase;
+        buffer[offset++] = format;
+
+        // bracket
+        MemoryCopy(buffer + offset, e->bracket, BRACKET_SIZE); offset += BRACKET_SIZE;
+
+        // group_phase
+        MemoryCopy(buffer + offset, &e->group_phase, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
+    }
+
+    // Write tournaments entities
+    for (u32 i = 0; i < tournaments_total; ++i)
+    {
+        Entity *e = &tournaments->entities[i];
+
+        // nxt, prv
+        MemoryCopy(buffer + offset, &e->nxt, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(buffer + offset, &e->prv, sizeof(u32)); offset += sizeof(u32);
+
+        // name_len + name
+        u32 name_len = (u32)e->name.len;
+        MemoryCopy(buffer + offset, &name_len, sizeof(u32)); offset += sizeof(u32);
+        if (name_len > 0)
+        {
+            MemoryCopy(buffer + offset, e->name.str, name_len);
+            offset += name_len;
+        }
+
+        // registrations
+        MemoryCopy(buffer + offset, &e->registrations, sizeof(u64)); offset += sizeof(u64);
+
+        // medals
+        MemoryCopy(buffer + offset, e->medals, 3); offset += 3;
+
+        // phase, format
+        u8 phase = (u8)e->phase;
+        u8 format = (u8)e->format;
+        buffer[offset++] = phase;
+        buffer[offset++] = format;
+
+        // bracket
+        MemoryCopy(buffer + offset, e->bracket, BRACKET_SIZE); offset += BRACKET_SIZE;
+
+        // group_phase
+        MemoryCopy(buffer + offset, &e->group_phase, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
+    }
+
+    // Single fwrite
+    FILE *f = fopen("olympiad.sav", "wb");
+    if (!f)
+    {
+        printf("Failed to open olympiad.sav for writing\n");
+        return false;
+    }
+
+    if (fwrite(buffer, 1, offset, f) != offset)
+    {
+        printf("Failed to write save file\n");
+        fclose(f);
+        return false;
+    }
+
+    fclose(f);
+    printf("Saved to olympiad.sav (%llu bytes)\n", offset);
+    return true;
+}
+
+/**
+ * Load the olympiad state from a binary file.
+ *
+ * Reads entire file with one fread, then parses the buffer.
+ */
+b32
+olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
+{
+    FILE *f = fopen("olympiad.sav", "rb");
+    if (!f)
+    {
+        printf("Cannot open olympiad.sav\n");
+        return false;
+    }
+
+    // Get file size
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (file_size <= 0)
+    {
+        printf("Invalid file size\n");
+        fclose(f);
+        return false;
+    }
+
+    // Single fread into buffer
+    u8 *buffer = push_array(arena, u8, file_size);
+    if (fread(buffer, 1, file_size, f) != (size_t)file_size)
+    {
+        printf("Failed to read save file\n");
+        fclose(f);
+        return false;
+    }
+    fclose(f);
+
+    u64 offset = 0;
+
+    // Read header
+    SaveHeader header;
+    MemoryCopy(&header, buffer + offset, sizeof(SaveHeader));
+    offset += sizeof(SaveHeader);
+
+    if (header.magic != SAVE_MAGIC)
+    {
+        printf("Invalid save file (bad magic)\n");
+        return false;
+    }
+
+    if (header.version != SAVE_VERSION)
+    {
+        printf("Version mismatch: file=%u, expected=%u\n", header.version, SAVE_VERSION);
+        return false;
+    }
+
+    if (header.players_len != players->len || header.tournaments_len != tournaments->len)
+    {
+        printf("EntityList length mismatch\n");
+        return false;
+    }
+
+    // Load players
+    players->first_free_idx = header.players_first_free_idx;
+    u32 players_total = players->len + 2;
+
+    for (u32 i = 0; i < players_total; ++i)
+    {
+        Entity *e = &players->entities[i];
+
+        // nxt, prv
+        MemoryCopy(&e->nxt, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(&e->prv, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+
+        // name_len + name
+        u32 name_len = 0;
+        MemoryCopy(&name_len, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+        if (name_len > 0)
+        {
+            u8 *name_str = push_array(arena, u8, name_len);
+            MemoryCopy(name_str, buffer + offset, name_len);
+            offset += name_len;
+            e->name.str = name_str;
+            e->name.len = name_len;
+        }
+        else
+        {
+            e->name.str = NULL;
+            e->name.len = 0;
+        }
+
+        // registrations
+        MemoryCopy(&e->registrations, buffer + offset, sizeof(u64)); offset += sizeof(u64);
+
+        // medals
+        MemoryCopy(e->medals, buffer + offset, 3); offset += 3;
+
+        // phase, format
+        e->phase = (TournamentPhase)buffer[offset++];
+        e->format = (TournamentFormat)buffer[offset++];
+
+        // bracket
+        MemoryCopy(e->bracket, buffer + offset, BRACKET_SIZE); offset += BRACKET_SIZE;
+
+        // group_phase
+        MemoryCopy(&e->group_phase, buffer + offset, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
+    }
+
+    // Load tournaments
+    tournaments->first_free_idx = header.tournaments_first_free_idx;
+    u32 tournaments_total = tournaments->len + 2;
+
+    for (u32 i = 0; i < tournaments_total; ++i)
+    {
+        Entity *e = &tournaments->entities[i];
+
+        // nxt, prv
+        MemoryCopy(&e->nxt, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(&e->prv, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+
+        // name_len + name
+        u32 name_len = 0;
+        MemoryCopy(&name_len, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+        if (name_len > 0)
+        {
+            u8 *name_str = push_array(arena, u8, name_len);
+            MemoryCopy(name_str, buffer + offset, name_len);
+            offset += name_len;
+            e->name.str = name_str;
+            e->name.len = name_len;
+        }
+        else
+        {
+            e->name.str = NULL;
+            e->name.len = 0;
+        }
+
+        // registrations
+        MemoryCopy(&e->registrations, buffer + offset, sizeof(u64)); offset += sizeof(u64);
+
+        // medals
+        MemoryCopy(e->medals, buffer + offset, 3); offset += 3;
+
+        // phase, format
+        e->phase = (TournamentPhase)buffer[offset++];
+        e->format = (TournamentFormat)buffer[offset++];
+
+        // bracket
+        MemoryCopy(e->bracket, buffer + offset, BRACKET_SIZE); offset += BRACKET_SIZE;
+
+        // group_phase
+        MemoryCopy(&e->group_phase, buffer + offset, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
+    }
+
+    printf("Loaded from olympiad.sav (%llu bytes)\n", offset);
+    return true;
 }

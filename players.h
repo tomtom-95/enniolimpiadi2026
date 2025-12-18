@@ -15,6 +15,8 @@
 #define MAX_GROUP_SIZE 8
 #define GROUP_NONE 0xFF  // Sentinel for "player not assigned to any group"
 
+#define MAX_STRING_SIZE 64 // Maximum size players and tournaments names
+
 #define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
 #define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
 
@@ -117,5 +119,9 @@ void entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1,
 void tournament_construct_bracket(Entity *tournament);
 void tournament_construct_groups(Entity *tournament);
 void tournament_populate_bracket_from_groups(Entity *tournament);
+
+// Save/Load functions
+b32 olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments);
+b32 olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments);
 
 #endif // PLAYERS_H

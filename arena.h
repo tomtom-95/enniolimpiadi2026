@@ -35,6 +35,9 @@ void temp_end(Temp temp);
 
 void ctx_init(void);
 
+Temp scratch_get(Arena **conflicts, u64 count);
+void scratch_release(Temp temp);
+
 //- rjf: push helper macros
 #define push_array_no_zero_aligned(a, T, c, align) (T *)arena_push((a), sizeof(T)*(c), (align))
 #define push_array_aligned(a, T, c, align) (T *)arena_push((a), sizeof(T)*(c), (align))
