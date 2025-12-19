@@ -18,19 +18,19 @@
 #define MAX_STRING_SIZE 64 // Maximum size players and tournaments names
 
 typedef enum TournamentFormat {
-    FORMAT_KNOCKOUT,        // Pure single elimination
+    FORMAT_KNOCKOUT  = 0,   // Pure single elimination
     FORMAT_GROUP_KNOCKOUT,  // Groups then knockout (World Cup style)
 } TournamentFormat;
 
 typedef enum TournamentPhase {
-    PHASE_REGISTRATION,  // Players can register/unregister
-    PHASE_GROUP,         // Group phase (only valid for FORMAT_GROUP_KNOCKOUT)
-    PHASE_KNOCKOUT,      // Knockout phase, bracket matches
-    PHASE_FINISHED,      // Tournament completed
+    PHASE_REGISTRATION = 0,  // Players can register/unregister
+    PHASE_GROUP,             // Group phase (only valid for FORMAT_GROUP_KNOCKOUT)
+    PHASE_KNOCKOUT,          // Knockout phase, bracket matches
+    PHASE_FINISHED,          // Tournament completed
 } TournamentPhase;
 
 typedef enum MatchResult {
-    MATCH_RESULT_TBD,   // The match must still be played
+    MATCH_RESULT_TBD = 0,   // The match must still be played
     MATCH_RESULT_WIN,
     MATCH_RESULT_DRAW,
     MATCH_RESULT_LOSE,
@@ -68,57 +68,74 @@ typedef struct GroupPhase {
     u8 bracket[BRACKET_SIZE];
 } GroupPhase;
 
-typedef struct Entity Entity;
-struct Entity {
+typedef struct Player Player;
+struct Player {
     u32 prv;
     u32 nxt;
     String8 name;
 
-    // I am assuming the entity will never have more than 64 registration
+    // bitmask of tournament indices
+    u64 registrations;
+};
+
+typedef struct Event Event;
+struct Event {
+    u32 prv;
+    u32 nxt;
+    String8 name;
+
+    // bitmask of player indices
     u64 registrations;
 
-    // Used only if Entity is a tournament
-    u8 medals[3];
     TournamentPhase phase;
     TournamentFormat format;
-
-    // Tournament bracket tree (heap-style: children of i at 2*i+1 and 2*i+2)
-    // Stores player indices. 0 means empty slot.
-    // Used when the tournament is a single elimination
     u8 bracket[BRACKET_SIZE];
-
-    // GroupPhase struct used when the tournament as a group phase
     GroupPhase group_phase;
 };
 
-typedef struct EntityList EntityList;
-struct EntityList {
-    Entity *entities;
+typedef struct PlayersList {                                                                                                                                                                                                                      
+    Player *players;
     u32 first_free_idx;
     u32 len;
-};
+} PlayersList;
+                                                                                                                                                                                                                                                   
+typedef struct EventsList {                                                                                                                                                                                                                  
+    Event *events;
+    u32 first_free_idx;
+    u32 len;
+} EventsList;
 
 s32 find_first_empty_slot(u32 bitmap);
 u32 find_all_filled_slots(u64 bitmap, s32 positions[64]);
 
-EntityList entity_list_init(Arena *arena, u32 len);
+// Players list functions
+PlayersList players_list_init(Arena *arena, u32 len);
+u32  players_list_find(PlayersList *list, String8 name);
+u32  players_list_add(PlayersList *list, String8 name);
+u32  players_list_count(PlayersList *list);
+void players_list_rename(PlayersList *list, u32 idx, String8 new_name);
+void players_list_remove(PlayersList *players, EventsList *events, String8 name);
 
-u32 entity_list_find(EntityList *entity_list, String8 name);
+// Events list functions
+EventsList events_list_init(Arena *arena, u32 len);
+u32  events_list_find(EventsList *list, String8 name);
+u32  events_list_add(EventsList *list, String8 name);
+u32  events_list_count(EventsList *list);
+void events_list_rename(EventsList *list, u32 idx, String8 new_name);
+void events_list_remove(EventsList *events, PlayersList *players, String8 name);
 
-u32  entity_list_add(EntityList *entity_list, String8 name);
-u32  entity_list_count(EntityList *list);
+// Registration functions
+void register_player_to_event(PlayersList *players, EventsList *events, String8 player_name, String8 event_name);
+void unregister_player_from_event(PlayersList *players, EventsList *events, String8 player_name, String8 event_name);
 
-void entity_list_rename(EntityList *entity_list, u32 idx, String8 new_name);
-void entity_list_remove(EntityList *list1, EntityList *list2, String8 name);
-void entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
-void entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2);
-
-void tournament_construct_bracket(Entity *tournament);
-void tournament_construct_groups(Entity *tournament);
-void tournament_populate_bracket_from_groups(Entity *tournament);
+// Tournament functions
+void tournament_construct_bracket(Event *event);
+void tournament_construct_groups(Event *event);
+void calculate_group_standings(Event *event, u32 group_idx, u8 *standings, u32 players_in_group);
+void tournament_populate_bracket_from_groups(Event *event);
 
 // Save/Load functions
-b32 olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments);
-b32 olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments);
+b32 olympiad_save(Arena *arena, PlayersList *players, EventsList *events);
+b32 olympiad_load(Arena *arena, PlayersList *players, EventsList *events);
 
 #endif // PLAYERS_H

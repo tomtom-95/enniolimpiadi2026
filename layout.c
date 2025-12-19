@@ -360,13 +360,13 @@ HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData point
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         TextInput *textInput = &data.textInputs[TEXTBOX_Events];
-        String8 eventName         = str8_copy(data.arena, str8((u8 *)textInput->buffer, textInput->len));
+        String8 eventName = str8_copy(data.arena, str8((u8 *)textInput->buffer, textInput->len));
         String8 eventNameStripped = str8_strip_whitespace(eventName);
         if (eventNameStripped.len != 0)
         {
             // Check if event with this name already exists
             u32 idx_tail = data.tournaments.len - 1;
-            u32 existing_idx = entity_list_find(&data.tournaments, eventNameStripped);
+            u32 existing_idx = events_list_find(&data.tournaments, eventNameStripped);
             if (existing_idx != idx_tail)
             {
                 // Event already exists, show warning
@@ -374,7 +374,7 @@ HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData point
             }
             else
             {
-                entity_list_add(&data.tournaments, eventNameStripped);
+                events_list_add(&data.tournaments, eventNameStripped);
             }
         }
     }
@@ -386,14 +386,14 @@ HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData poin
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        TextInput *textInput       = &data.textInputs[TEXTBOX_Players];
-        String8 playerName         = str8_copy(data.arena, str8((u8 *)textInput->buffer, textInput->len));
+        TextInput *textInput = &data.textInputs[TEXTBOX_Players];
+        String8 playerName = str8_copy(data.arena, str8((u8 *)textInput->buffer, textInput->len));
         String8 playerNameStripped = str8_strip_whitespace(playerName);
         if (playerNameStripped.len != 0)
         {
             // Check if player with this name already exists
             u32 idx_tail = data.players.len - 1;
-            u32 existing_idx = entity_list_find(&data.players, playerNameStripped);
+            u32 existing_idx = players_list_find(&data.players, playerNameStripped);
             if (existing_idx != idx_tail)
             {
                 // Player already exists, show warning
@@ -401,7 +401,7 @@ HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData poin
             }
             else
             {
-                entity_list_add(&data.players, playerNameStripped);
+                players_list_add(&data.players, playerNameStripped);
             }
         }
     }
@@ -414,19 +414,19 @@ HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointe
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         u32 player_idx = *(u32 *)userData;
-        Entity *player = data.players.entities + player_idx;
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Player *player = data.players.players + player_idx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
 
         // Check if player is already registered to this tournament
         bool is_registered = (player->registrations >> data.selectedTournamentIdx) & 1;
 
         if (is_registered)
         {
-            entity_list_unregister(&data.players, &data.tournaments, player->name, tournament->name);
+            unregister_player_from_event(&data.players, &data.tournaments, player->name, tournament->name);
         }
         else
         {
-            entity_list_register(&data.players, &data.tournaments, player->name, tournament->name);
+            register_player_to_event(&data.players, &data.tournaments, player->name, tournament->name);
         }
     }
 }
@@ -441,7 +441,7 @@ HandleAdvanceWinner(Clay_ElementId elementId, Clay_PointerData pointerData, void
     u8 player_idx = (u8)(encoded & 0xFF);
     u32 bracket_pos = (u32)(encoded >> 8);
 
-    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+    Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
 
     // Only allow changes when tournament is in progress
     if (tournament->phase == PHASE_REGISTRATION) return;
@@ -482,7 +482,7 @@ HandleStartTournament(Clay_ElementId elementId, Clay_PointerData pointerData, vo
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
 
         // Only start if we have at least 2 players
         s32 positions[64];
@@ -522,7 +522,7 @@ HandleConfirmReturnToRegistration(Clay_ElementId elementId, Clay_PointerData poi
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         tournament->phase = PHASE_REGISTRATION;
         data.confirmationModal = MODAL_NULL;
 
@@ -548,7 +548,7 @@ HandleConfirmReturnToGroupPhase(Clay_ElementId elementId, Clay_PointerData point
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         tournament->phase = PHASE_GROUP;
         data.confirmationModal = MODAL_NULL;
 
@@ -573,7 +573,7 @@ HandleTerminateGroupPhase(Clay_ElementId elementId, Clay_PointerData pointerData
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         tournament->phase = PHASE_KNOCKOUT;
     }
 }
@@ -585,8 +585,8 @@ HandleConfirmDeleteTournament(Clay_ElementId elementId, Clay_PointerData pointer
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.deleteTournamentIdx;
-        entity_list_remove(&data.tournaments, &data.players, tournament->name);
+        Event *tournament = data.tournaments.events + data.deleteTournamentIdx;
+        events_list_remove(&data.tournaments, &data.players, tournament->name);
         data.deleteTournamentIdx = 0;
         data.confirmationModal = MODAL_NULL;
     }
@@ -611,8 +611,8 @@ HandleConfirmDeletePlayer(Clay_ElementId elementId, Clay_PointerData pointerData
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *player = data.players.entities + data.deletePlayerIdx;
-        entity_list_remove(&data.players, &data.tournaments, player->name);
+        Player *player = data.players.players + data.deletePlayerIdx;
+        players_list_remove(&data.players, &data.tournaments, player->name);
         data.deletePlayerIdx = 0;
         data.confirmationModal = MODAL_NULL;
     }
@@ -637,7 +637,7 @@ HandleSelectTournamentFormat(Clay_ElementId elementId, Clay_PointerData pointerD
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
         TournamentFormat format = *(TournamentFormat *)userData;
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         tournament->format = format;
     }
 }
@@ -653,7 +653,7 @@ HandleStartRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData, v
         data.focusedTextbox = TEXTBOX_EventRename;
 
         // Pre-fill the textbox with the current event name
-        Entity *tournament = data.tournaments.entities + event_idx;
+        Event *tournament = data.tournaments.events + event_idx;
         TextInput *input = &data.textInputs[TEXTBOX_EventRename];
         u32 copy_len = tournament->name.len < TEXT_INPUT_MAX_LEN - 1
             ? (u32)tournament->name.len
@@ -686,7 +686,7 @@ HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData,
 
                 // Check if another event with this name already exists
                 u32 idx_tail = data.tournaments.len - 1;
-                u32 existing_idx = entity_list_find(&data.tournaments, new_name);
+                u32 existing_idx = events_list_find(&data.tournaments, new_name);
                 if (existing_idx != idx_tail && existing_idx != data.renamingEventIdx)
                 {
                     // Event already exists, show warning
@@ -694,7 +694,7 @@ HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData,
                     return;
                 }
 
-                entity_list_rename(&data.tournaments, data.renamingEventIdx, new_name);
+                events_list_rename(&data.tournaments, data.renamingEventIdx, new_name);
             }
 
             // Clear rename state
@@ -729,7 +729,7 @@ HandleStartRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData, 
         data.focusedTextbox = TEXTBOX_PlayerRename;
 
         // Pre-fill the textbox with the current player name
-        Entity *player = data.players.entities + player_idx;
+        Player *player = data.players.players + player_idx;
         TextInput *input = &data.textInputs[TEXTBOX_PlayerRename];
         u32 copy_len = player->name.len < TEXT_INPUT_MAX_LEN - 1
             ? (u32)player->name.len
@@ -763,7 +763,7 @@ HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData
 
                 // Check if another player with this name already exists
                 u32 idx_tail = data.players.len - 1;
-                u32 existing_idx = entity_list_find(&data.players, new_name);
+                u32 existing_idx = players_list_find(&data.players, new_name);
                 if (existing_idx != idx_tail && existing_idx != data.renamingPlayerIdx)
                 {
                     // Player already exists, show warning
@@ -771,7 +771,7 @@ HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData
                     return;
                 }
 
-                entity_list_rename(&data.players, data.renamingPlayerIdx, new_name);
+                players_list_rename(&data.players, data.renamingPlayerIdx, new_name);
             }
 
             // Clear rename state
@@ -802,7 +802,7 @@ HandleIncrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData,
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         if (tournament->group_phase.group_size < MAX_GROUP_SIZE)
         {
             tournament->group_phase.group_size++;
@@ -819,7 +819,7 @@ HandleDecrementGroupSize(Clay_ElementId elementId, Clay_PointerData pointerData,
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         if (tournament->group_phase.group_size > 2)
         {
             tournament->group_phase.group_size--;
@@ -837,7 +837,7 @@ HandleIncrementAdvancePerGroup(Clay_ElementId elementId, Clay_PointerData pointe
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         // Cannot advance more players than are in the group
         if (tournament->group_phase.advance_per_group < tournament->group_phase.group_size - 1)
         {
@@ -854,7 +854,7 @@ HandleDecrementAdvancePerGroup(Clay_ElementId elementId, Clay_PointerData pointe
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         if (tournament->group_phase.advance_per_group > 1)
         {
             tournament->group_phase.advance_per_group--;
@@ -877,7 +877,7 @@ HandleMatrixCellClick(Clay_ElementId elementId, Clay_PointerData pointerData, vo
     MatrixCellData *cellData = (MatrixCellData *)userData;
 
     // Only allow score entry when tournament is in progress
-    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+    Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
     if (tournament->phase == PHASE_REGISTRATION)
     {
         return;
@@ -969,7 +969,7 @@ HandleConfirmScoreModal(Clay_ElementId elementId, Clay_PointerData pointerData, 
         }
 
         // Save to the tournament's group phase
-        Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+        Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
         u32 g = data.scoreModalGroupIdx;
         u32 row = data.scoreModalRowIdx;
         u32 col = data.scoreModalColIdx;
@@ -1360,7 +1360,7 @@ RenderDashboard(void)
                         .fontSize = 12,
                         .textColor = dashLabelText
                     }));
-                    u32 tournaments_count = entity_list_count(&data.tournaments);
+                    u32 tournaments_count = events_list_count(&data.tournaments);
                     String8 tournaments_count_str8 = str8_from_u32(data.frameArena, tournaments_count);
                     Clay_String tournaments_count_clay = str8_to_clay(tournaments_count_str8);
                     CLAY_TEXT(tournaments_count_clay, CLAY_TEXT_CONFIG({
@@ -1402,7 +1402,7 @@ RenderDashboard(void)
                         .fontSize = 12,
                         .textColor = dashLabelText
                     }));
-                    u32 players_count = entity_list_count(&data.players);
+                    u32 players_count = players_list_count(&data.players);
                     String8 players_count_str8 = str8_from_u32(data.frameArena, players_count);
                     Clay_String players_count_clay = str8_to_clay(players_count_str8);
                     CLAY_TEXT(players_count_clay, CLAY_TEXT_CONFIG({
@@ -1603,7 +1603,7 @@ RenderDashboard(void)
 /////////////////////////////////////////////////
 // Tournament
 
-static void
+void
 RenderGoBackButton(void)
 {
     CLAY(CLAY_ID("GoBackRow"), {
@@ -1631,7 +1631,7 @@ RenderGoBackButton(void)
     }
 }
 
-static void
+void
 RenderTournamentBanner(u32 tournament_idx)
 {
     CLAY(CLAY_ID("TournamentBanner"), {
@@ -1644,7 +1644,7 @@ RenderTournamentBanner(u32 tournament_idx)
         .backgroundColor = dashAccentOrange,
         .cornerRadius = CLAY_CORNER_RADIUS(16)
     }) {
-        CLAY_TEXT(str8_to_clay((data.tournaments.entities + tournament_idx)->name), CLAY_TEXT_CONFIG({
+        CLAY_TEXT(str8_to_clay((data.tournaments.events + tournament_idx)->name), CLAY_TEXT_CONFIG({
             .fontId = FONT_ID_PRESS_START_2P,
             .fontSize = 28,
             .textColor = COLOR_WHITE
@@ -1652,7 +1652,7 @@ RenderTournamentBanner(u32 tournament_idx)
     }
 }
 
-static void
+void
 RenderFormatOption(TournamentFormat format, TournamentFormat current_format,
     Clay_String name, Clay_String description, u32 id)
 {
@@ -1717,8 +1717,8 @@ RenderFormatOption(TournamentFormat format, TournamentFormat current_format,
     }
 }
 
-static void
-RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
+void
+RenderRegistrationPanel(u32 tournament_idx, Event *tournament,
     s32 *registered_positions, u32 registered_count)
 {
     // Tournament format selector (radio-style list)
@@ -1998,7 +1998,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
         for (u32 i = 0; i < registered_count; i++)
         {
             u32 player_idx = registered_positions[i];
-            Entity *player = data.players.entities + player_idx;
+            Player *player = data.players.players + player_idx;
 
             CLAY(CLAY_IDI("RegisteredPlayer", player_idx), {
                 .layout = {
@@ -2082,10 +2082,10 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
         .cornerRadius = { 0, 0, 8, 8 }
     }) {
         u32 idx_tail = data.players.len - 1;
-        u32 idx = (data.players.entities)->nxt;
+        u32 idx = (data.players.players)->nxt;
         while (idx != idx_tail)
         {
-            Entity *player = data.players.entities + idx;
+            Player *player = data.players.players + idx;
             bool is_registered = (player->registrations >> tournament_idx) & 1;
 
             if (!is_registered)
@@ -2135,7 +2135,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
 }
 
 // Render in-progress phase left panel content
-static void
+void
 RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
 {
     // Show tournament status
@@ -2145,7 +2145,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
         .textColor = dashAccentTeal
     }));
 
-    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+    Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
 
     // CONTINUE section - forward/advance actions (only show when there's a forward action)
     if (tournament->format == FORMAT_GROUP_KNOCKOUT &&
@@ -2346,7 +2346,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
             for (u32 i = 0; i < registered_count; i++)
             {
                 u32 player_idx = registered_positions[i];
-                Entity *player = data.players.entities + player_idx;
+                Player *player = data.players.players + player_idx;
 
                 CLAY(CLAY_IDI("PlayerListItem", player_idx), {
                     .layout = {
@@ -2605,7 +2605,7 @@ RenderByeSlot(u32 match_id, float zoom)
     }
 }
 
-static void
+void
 RenderGroupPhaseHeader(void)
 {
     CLAY(CLAY_ID("GroupPhaseHeader"), {
@@ -2633,7 +2633,7 @@ RenderGroupPhaseHeader(void)
     }
 }
 
-static void
+void
 RenderKnockoutHeader(void)
 {
     CLAY(CLAY_ID("KnockoutHeader"), {
@@ -2660,7 +2660,7 @@ RenderKnockoutHeader(void)
     }
 }
 
-static void
+void
 RenderKnockoutChart(u8 *bracket, u32 num_players)
 {
     CLAY(CLAY_ID("KnockoutBracketContainer"), {
@@ -2766,12 +2766,12 @@ RenderKnockoutChart(u8 *bracket, u32 num_players)
 
                                 if (player1_idx != 0)
                                 {
-                                    Entity *player1 = data.players.entities + player1_idx;
+                                    Player *player1 = data.players.players + player1_idx;
                                     name1 = str8_to_clay_truncated(data.frameArena, player1->name, MAX_DISPLAY_NAME_LEN);
                                 }
                                 if (player2_idx != 0)
                                 {
-                                    Entity *player2 = data.players.entities + player2_idx;
+                                    Player *player2 = data.players.players + player2_idx;
                                     name2 = str8_to_clay_truncated(data.frameArena, player2->name, MAX_DISPLAY_NAME_LEN);
                                 }
 
@@ -2789,7 +2789,7 @@ RenderKnockoutChart(u8 *bracket, u32 num_players)
 // Tournament with group phase
 
 void
-RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
+RenderGroupMatrix(Event *tournament, u32 group_idx, u32 players_in_group)
 {
     float zoom = data.groupMatrixZoomLevel;
     u16 cellWidth = (u16)(100 * zoom);
@@ -2842,7 +2842,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
                 u8 player_idx = tournament->group_phase.groups[group_idx][col];
                 if (player_idx != 0)
                 {
-                    Entity *player = data.players.entities + player_idx;
+                    Player *player = data.players.players + player_idx;
                     u32 header_id = group_idx * MAX_GROUP_SIZE * 2 + col;
                     CLAY(CLAY_IDI("MatrixColHeader", header_id), {
                         .layout = {
@@ -2869,7 +2869,7 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
             u8 row_player_idx = tournament->group_phase.groups[group_idx][row];
             if (row_player_idx != 0)
             {
-                Entity *row_player = data.players.entities + row_player_idx;
+                Player *row_player = data.players.players + row_player_idx;
                 u32 row_id = group_idx * MAX_GROUP_SIZE + row;
 
                 CLAY(CLAY_IDI("MatrixRow", row_id), {
@@ -2975,8 +2975,8 @@ RenderGroupMatrix(Entity *tournament, u32 group_idx, u32 players_in_group)
     }
 }
 
-static void
-RenderGroupsKnockoutChart(Entity *tournament)
+void
+RenderGroupsKnockoutChart(Event *tournament)
 {
     // Get group info from the constructed group phase
     u32 num_groups = tournament->group_phase.num_groups;
@@ -3216,7 +3216,7 @@ RenderTournamentLeftPanel(u32 tournament_idx)
             .cornerRadius = { 0, 0, 12, 12 },
             .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
-            Entity *panel_tournament = data.tournaments.entities + tournament_idx;
+            Event *panel_tournament = data.tournaments.events + tournament_idx;
             s32 registered_positions[64] = {0};
             u32 registered_count = find_all_filled_slots(panel_tournament->registrations, registered_positions);
 
@@ -3262,7 +3262,7 @@ RenderTournamentRightPanel(u32 tournament_idx)
             .cornerRadius = { 0, 0, 12, 12 },
             // .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
-            Entity *tournament = data.tournaments.entities + tournament_idx;
+            Event *tournament = data.tournaments.events + tournament_idx;
 
             // Get the number of players in the tournament
             s32 _positions[64] = {0};
@@ -3548,10 +3548,10 @@ RenderEventsList(void)
 
             // Event rows
             u32 idx_tail = data.tournaments.len - 1;
-            u32 idx = (data.tournaments.entities)->nxt;
+            u32 idx = (data.tournaments.events)->nxt;
             while (idx != idx_tail)
             {
-                Entity *tournament = data.tournaments.entities + idx;
+                Event *tournament = data.tournaments.events + idx;
 
                 CLAY(CLAY_IDI("EventRow", idx), {
                     .layout = {
@@ -3866,10 +3866,10 @@ RenderPlayersList(void)
 
             // Player rows
             u32 idx_tail = data.players.len - 1;
-            u32 idx = (data.players.entities)->nxt;
+            u32 idx = (data.players.players)->nxt;
             while (idx != idx_tail)
             {
-                Entity *player = data.players.entities + idx;
+                Player *player = data.players.players + idx;
 
                 CLAY(CLAY_IDI("PlayerRow", idx), {
                     .layout = {
@@ -3971,7 +3971,7 @@ RenderPlayerStatCard(u32 idx, Clay_String label, Clay_String value, Clay_Color a
 void
 RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
 {
-    Entity *tournament = data.tournaments.entities + tournament_idx;
+    Event *tournament = data.tournaments.events + tournament_idx;
 
     // Determine phase color and label
     Clay_Color statusColor;
@@ -4101,7 +4101,7 @@ RenderPlayerGoBackButton(void)
 void
 RenderPlayerBanner(u32 player_idx)
 {
-    Entity *player = data.players.entities + player_idx;
+    Player *player = data.players.players + player_idx;
 
     CLAY(CLAY_ID("PlayerBanner"), {
         .layout = {
@@ -4124,7 +4124,7 @@ RenderPlayerBanner(u32 player_idx)
 void
 RenderPlayerDetail(u32 player_idx)
 {
-    Entity *player = data.players.entities + player_idx;
+    Player *player = data.players.players + player_idx;
 
     // Count registrations and get tournament indices
     s32 registered_tournaments[64];
@@ -4394,14 +4394,14 @@ RenderConfirmationModal(void)
     {
         assert(data.deleteTournamentIdx != 0);
 
-        Entity *tournament = data.tournaments.entities + data.deleteTournamentIdx;
+        Event *tournament = data.tournaments.events + data.deleteTournamentIdx;
         entityName = str8_to_clay(tournament->name);
     }
     else if (modal == MODAL_DELETE_PLAYER)
     {
         assert(data.deletePlayerIdx != 0);
 
-        Entity *player = data.players.entities + data.deletePlayerIdx;
+        Player *player = data.players.players + data.deletePlayerIdx;
         entityName = str8_to_clay(player->name);
     }
 
@@ -4569,14 +4569,14 @@ RenderRenameModal(void)
 
     if (data.renamingEventIdx)
     {
-        Entity *tournament = data.tournaments.entities + data.renamingEventIdx;
+        Event *tournament = data.tournaments.events + data.renamingEventIdx;
         currentName = str8_to_clay(tournament->name);
         titleText = CLAY_STRING("Rename Event");
         textbox = TEXTBOX_EventRename;
     }
     else
     {
-        Entity *player = data.players.entities + data.renamingPlayerIdx;
+        Player *player = data.players.players + data.renamingPlayerIdx;
         currentName = str8_to_clay(player->name);
         titleText = CLAY_STRING("Rename Player");
         textbox = TEXTBOX_PlayerRename;
@@ -4738,12 +4738,12 @@ RenderRenameModal(void)
 void
 RenderRegisterScoreModal(void)
 {
-    Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
+    Event *tournament = data.tournaments.events + data.selectedTournamentIdx;
     u8 row_player_idx = tournament->group_phase.groups[data.scoreModalGroupIdx][data.scoreModalRowIdx];
     u8 col_player_idx = tournament->group_phase.groups[data.scoreModalGroupIdx][data.scoreModalColIdx];
 
-    Entity *row_player = data.players.entities + row_player_idx;
-    Entity *col_player = data.players.entities + col_player_idx;
+    Player *row_player = data.players.players + row_player_idx;
+    Player *col_player = data.players.players + col_player_idx;
 
     // Process keyboard input for score textboxes
     if (data.focusedTextbox == TEXTBOX_Score1)

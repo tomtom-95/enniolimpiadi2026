@@ -10,37 +10,37 @@ int main(void)
     // Allocate arena for all allocations
     Arena *arena = arena_alloc(MegaByte(16));
 
-    // Initialize entity lists
-    EntityList players = entity_list_init(arena, MAX_NUM_ENTITIES);
-    EntityList tournaments = entity_list_init(arena, MAX_NUM_ENTITIES);
+    // Initialize lists
+    PlayersList players = players_list_init(arena, MAX_NUM_ENTITIES);
+    EventsList events = events_list_init(arena, MAX_NUM_ENTITIES);
 
     // Add players
-    entity_list_add(&players, str8_lit("Alice"));
-    entity_list_add(&players, str8_lit("Bob"));
-    entity_list_add(&players, str8_lit("Charlie"));
+    players_list_add(&players, str8_lit("Alice"));
+    players_list_add(&players, str8_lit("Bob"));
+    players_list_add(&players, str8_lit("Charlie"));
 
-    // Add tournaments
-    entity_list_add(&tournaments, str8_lit("Tennis"));
-    entity_list_add(&tournaments, str8_lit("Chess"));
+    // Add events
+    events_list_add(&events, str8_lit("Tennis"));
+    events_list_add(&events, str8_lit("Chess"));
 
-    // Register players to tournaments
+    // Register players to events
     // Alice -> Tennis, Chess
-    entity_list_register(&players, &tournaments, str8_lit("Alice"), str8_lit("Tennis"));
-    entity_list_register(&players, &tournaments, str8_lit("Alice"), str8_lit("Chess"));
+    register_player_to_event(&players, &events, str8_lit("Alice"), str8_lit("Tennis"));
+    register_player_to_event(&players, &events, str8_lit("Alice"), str8_lit("Chess"));
 
     // Bob -> Tennis
-    entity_list_register(&players, &tournaments, str8_lit("Bob"), str8_lit("Tennis"));
+    register_player_to_event(&players, &events, str8_lit("Bob"), str8_lit("Tennis"));
 
     // Charlie -> Chess
-    entity_list_register(&players, &tournaments, str8_lit("Charlie"), str8_lit("Chess"));
+    register_player_to_event(&players, &events, str8_lit("Charlie"), str8_lit("Chess"));
 
     // Save to file
-    b32 success = olympiad_save(arena, &players, &tournaments);
+    b32 success = olympiad_save(arena, &players, &events);
 
     if (success)
     {
-        printf("Players: %u\n", entity_list_count(&players));
-        printf("Tournaments: %u\n", entity_list_count(&tournaments));
+        printf("Players: %u\n", players_list_count(&players));
+        printf("Events: %u\n", events_list_count(&events));
     }
 
     return success ? 0 : 1;

@@ -60,20 +60,22 @@ main(void)
 
     Arena *arena = arena_alloc(MegaByte(10));
 
-    EntityList players = entity_list_init(arena, 64);
-    EntityList tournaments = entity_list_init(arena, 64);
+    PlayersList players_list = players_list_init(arena, 64);
+    EventsList events_list = events_list_init(arena, 64);
 
-    olympiad_load(arena, &players, &tournaments);
+    olympiad_load(arena, &players_list, &events_list);
 
     // Initialization of global data
     data.arena = arena;
     data.frameArena = arena_alloc(MegaByte(1));
+
     data.yOffset = 0;
     data.fonts = fonts;
 
-    data.players = players;
-    data.tournaments = tournaments;
-    data.chartZoomLevel = 1.0f;
+    data.players     = players_list;
+    data.tournaments = events_list;
+
+    data.chartZoomLevel       = 1.0f;
     data.groupMatrixZoomLevel = 1.0f;
 
     while (!WindowShouldClose())
@@ -114,7 +116,6 @@ main(void)
 
             TextInput_RenderCursor(&data.textInputs[data.focusedTextbox], bounding_box, scroll_data);
         }
-
 
         EndDrawing();
 

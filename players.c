@@ -32,64 +32,111 @@ find_all_filled_slots(u64 bitmap, s32 positions[64])
     return count;
 }
 
-EntityList
-entity_list_init(Arena *arena, u32 len)
+PlayersList
+players_list_init(Arena *arena, u32 len)
 {
     assert(len <= MAX_NUM_ENTITIES);
 
-    Entity *entities = push_array(arena, Entity, len);
+    Player *players = push_array(arena, Player, len);
 
     u32 idx_tail = len - 1;
 
     // Link head and tail sentinel
-    Entity *head = entities;
-    Entity *tail = entities + idx_tail;
+    Player *head = players;
+    Player *tail = players + idx_tail;
 
     head->nxt = idx_tail;
     tail->prv = 0;
 
     // Initialize the free list
-    EntityList entity_list = { .entities = entities, .first_free_idx = 1, .len = len };
+    PlayersList players_list = { .players = players, .first_free_idx = 1, .len = len };
 
     for (u32 i = 1; i < idx_tail; ++i)
     {
-        entity_list.entities[i].nxt = i + 1;
-        entity_list.entities[i].phase = PHASE_REGISTRATION;
+        players_list.players[i].nxt = i + 1;
     }
 
-    return entity_list;
+    return players_list;
+}
+
+EventsList
+events_list_init(Arena *arena, u32 len)
+{
+    assert(len <= MAX_NUM_ENTITIES);
+
+    Event *events = push_array(arena, Event, len);
+
+    u32 idx_tail = len - 1;
+
+    // Link head and tail sentinel
+    Event *head = events;
+    Event *tail = events + idx_tail;
+
+    head->nxt = idx_tail;
+    tail->prv = 0;
+
+    // Initialize the free list
+    EventsList events_list = { .events = events, .first_free_idx = 1, .len = len };
+
+    for (u32 i = 1; i < idx_tail; ++i)
+    {
+        events_list.events[i].nxt = i + 1;
+        events_list.events[i].phase = PHASE_REGISTRATION;
+    }
+
+    return events_list;
 }
 
 u32
-entity_list_find(EntityList *entity_list, String8 name)
+players_list_find(PlayersList *list, String8 name)
 {
-    u32 idx_tail = entity_list->len - 1;
+    u32 idx_tail = list->len - 1;
 
-    u32 idx = entity_list->entities->nxt;
+    u32 idx = list->players->nxt;
     while (idx != idx_tail)
     {
-        Entity *entity = entity_list->entities + idx;
-        if (str8_cmp(name, entity->name))
+        Player *player = list->players + idx;
+        if (str8_cmp(name, player->name))
         {
             return idx;
         }
 
-        idx = entity->nxt;
+        idx = player->nxt;
     }
 
     return idx;
 }
 
 u32
-entity_list_count(EntityList *entity_list)
+events_list_find(EventsList *list, String8 name)
 {
-    u32 idx_tail = entity_list->len - 1;
+    u32 idx_tail = list->len - 1;
 
-    u32 idx = entity_list->entities->nxt;
+    u32 idx = list->events->nxt;
+    while (idx != idx_tail)
+    {
+        Event *event = list->events + idx;
+        if (str8_cmp(name, event->name))
+        {
+            return idx;
+        }
+
+        idx = event->nxt;
+    }
+
+    return idx;
+}
+
+u32
+players_list_count(PlayersList *list)
+{
+    u32 idx_tail = list->len - 1;
+
+    u32 idx = list->players->nxt;
     u32 count = 0;
     while (idx != idx_tail)
     {
-        idx = (entity_list->entities + idx)->nxt;
+        idx = (list->players + idx)->nxt;
         ++count;
     }
 
@@ -97,146 +144,248 @@ entity_list_count(EntityList *entity_list)
 }
 
 u32
-entity_list_add(EntityList *entity_list, String8 name)
+events_list_count(EventsList *list)
 {
-    u32 idx_tail = entity_list->len - 1;
+    u32 idx_tail = list->len - 1;
+
+    u32 idx = list->events->nxt;
+    u32 count = 0;
+    while (idx != idx_tail)
+    {
+        idx = (list->events + idx)->nxt;
+        ++count;
+    }
+
+    return count;
+}
+
+u32
+players_list_add(PlayersList *list, String8 name)
+{
+    u32 idx_tail = list->len - 1;
 
     // Make sure there is not already a player with this name
-    assert(entity_list_find(entity_list, name) == idx_tail);
+    assert(players_list_find(list, name) == idx_tail);
 
-    u32 idx_entity = entity_list->first_free_idx;
-    assert(idx_entity != idx_tail);
+    u32 idx_player = list->first_free_idx;
+    assert(idx_player != idx_tail);
 
-    Entity *head = entity_list->entities;
+    Player *head = list->players;
 
     u32 idx_next = head->nxt;
 
-    Entity *entity = head + idx_entity;
-    Entity *next   = head + idx_next;
+    Player *player = head + idx_player;
+    Player *next   = head + idx_next;
 
     // Move the first free
-    entity_list->first_free_idx = entity->nxt;
+    list->first_free_idx = player->nxt;
 
-    head->nxt   = idx_entity;
-    entity->prv = 0;
-    entity->nxt = idx_next;
-    next->prv   = idx_entity;
+    head->nxt   = idx_player;
+    player->prv = 0;
+    player->nxt = idx_next;
+    next->prv   = idx_player;
 
     // Fill the node with data
-    entity->name.len = name.len;
-    entity->name.str = name.str;
+    player->name.len = name.len;
+    player->name.str = name.str;
 
-    // Player entity is not registered to anything
-    entity->registrations = 0;
+    // Player is not registered to anything
+    player->registrations = 0;
+
+    return idx_player;
+}
+
+u32
+events_list_add(EventsList *list, String8 name)
+{
+    u32 idx_tail = list->len - 1;
+
+    // Make sure there is not already an event with this name
+    assert(events_list_find(list, name) == idx_tail);
+
+    u32 idx_event = list->first_free_idx;
+    assert(idx_event != idx_tail);
+
+    Event *head = list->events;
+
+    u32 idx_next = head->nxt;
+
+    Event *event = head + idx_event;
+    Event *next  = head + idx_next;
+
+    // Move the first free
+    list->first_free_idx = event->nxt;
+
+    head->nxt  = idx_event;
+    event->prv = 0;
+    event->nxt = idx_next;
+    next->prv  = idx_event;
+
+    // Fill the node with data
+    event->name.len = name.len;
+    event->name.str = name.str;
+
+    // Event has no registered players
+    event->registrations = 0;
 
     // Default group size and advance count for tournaments
-    entity->group_phase.group_size = 4;
-    entity->group_phase.advance_per_group = 2;
+    event->group_phase.group_size = 4;
+    event->group_phase.advance_per_group = 2;
 
-    return idx_entity;
+    return idx_event;
 }
 
 void
-entity_list_rename(EntityList *entity_list, u32 idx, String8 name)
+players_list_rename(PlayersList *list, u32 idx, String8 name)
 {
-    u32 idx_tail = entity_list->len - 1;
+    u32 idx_tail = list->len - 1;
 
-    // Check if another active entity already has this name
-    u32 existing_idx = entity_list_find(entity_list, name);
+    // Check if another active player already has this name
+    u32 existing_idx = players_list_find(list, name);
     assert(existing_idx == idx_tail || existing_idx == idx);
 
-    // No duplicate found, the entity can be renamed
-    Entity *entity = entity_list->entities + idx;
-    entity->name = name;
+    // No duplicate found, the player can be renamed
+    Player *player = list->players + idx;
+    player->name = name;
 }
 
 void
-entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
+events_list_rename(EventsList *list, u32 idx, String8 name)
 {
-    u32 idx_tail = list1->len - 1;
+    u32 idx_tail = list->len - 1;
 
-    u32 idx = entity_list_find(list1, name);
+    // Check if another active event already has this name
+    u32 existing_idx = events_list_find(list, name);
+    assert(existing_idx == idx_tail || existing_idx == idx);
+
+    // No duplicate found, the event can be renamed
+    Event *event = list->events + idx;
+    event->name = name;
+}
+
+void
+players_list_remove(PlayersList *players, EventsList *events, String8 name)
+{
+    u32 idx_tail = players->len - 1;
+
+    u32 idx = players_list_find(players, name);
     assert(idx != idx_tail);
 
-    Entity *head1 = list1->entities;
-    Entity *entity = head1 + idx;
+    Player *head = players->players;
+    Player *player = head + idx;
 
-    u32 idx_prv = entity->prv;
-    u32 idx_nxt = entity->nxt;
+    u32 idx_prv = player->prv;
+    u32 idx_nxt = player->nxt;
 
-    Entity *prev = head1 + idx_prv;
-    Entity *next = head1 + idx_nxt;
+    Player *prev = head + idx_prv;
+    Player *next = head + idx_nxt;
 
+    // Unregister this player from all events they were registered to
     s32 positions[64] = {0};
-    u32 count = find_all_filled_slots((list1->entities + idx)->registrations, positions);
+    u32 count = find_all_filled_slots(player->registrations, positions);
     for (u32 i = 0; i < count; ++i)
     {
-        Entity *entity2 = list2->entities + positions[i];
+        Event *event = events->events + positions[i];
 
-        // Set a bit at position idx to 0
-        entity2->registrations &= ~(1ULL << idx);
+        // Clear the bit for this player
+        event->registrations &= ~(1ULL << idx);
 
-        // Update data relative of tournament distribution of players
-        tournament_construct_groups(entity2);
-        tournament_construct_bracket(entity2);
-        tournament_populate_bracket_from_groups(entity2);
+        // Update tournament bracket/groups
+        tournament_construct_groups(event);
+        tournament_construct_bracket(event);
+        tournament_populate_bracket_from_groups(event);
     }
 
     prev->nxt = idx_nxt;
     next->prv = idx_prv;
 
-    entity->nxt = list1->first_free_idx;
-    list1->first_free_idx = idx;
+    player->nxt = players->first_free_idx;
+    players->first_free_idx = idx;
 }
 
 void
-entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String8 name2)
+events_list_remove(EventsList *events, PlayersList *players, String8 name)
 {
-    u32 idx_tail1 = list1->len - 1;
-    u32 idx_tail2 = list2->len - 1;
+    u32 idx_tail = events->len - 1;
 
-    u32 idx1 = entity_list_find(list1, name1);
-    assert(idx1 != idx_tail1);
+    u32 idx = events_list_find(events, name);
+    assert(idx != idx_tail);
 
-    u32 idx2 = entity_list_find(list2, name2);
-    assert(idx2 != idx_tail2);
+    Event *head = events->events;
+    Event *event = head + idx;
 
-    Entity *entity1 = list1->entities + idx1;
-    Entity *entity2 = list2->entities + idx2;
+    u32 idx_prv = event->prv;
+    u32 idx_nxt = event->nxt;
+
+    Event *prev = head + idx_prv;
+    Event *next = head + idx_nxt;
+
+    // Unregister all players from this event
+    s32 positions[64] = {0};
+    u32 count = find_all_filled_slots(event->registrations, positions);
+    for (u32 i = 0; i < count; ++i)
+    {
+        Player *player = players->players + positions[i];
+
+        // Clear the bit for this event
+        player->registrations &= ~(1ULL << idx);
+    }
+
+    prev->nxt = idx_nxt;
+    next->prv = idx_prv;
+
+    event->nxt = events->first_free_idx;
+    events->first_free_idx = idx;
+}
+
+void
+register_player_to_event(PlayersList *players, EventsList *events, String8 player_name, String8 event_name)
+{
+    u32 idx_tail_players = players->len - 1;
+    u32 idx_tail_events = events->len - 1;
+
+    u32 player_idx = players_list_find(players, player_name);
+    assert(player_idx != idx_tail_players);
+
+    u32 event_idx = events_list_find(events, event_name);
+    assert(event_idx != idx_tail_events);
+
+    Player *player = players->players + player_idx;
+    Event *event = events->events + event_idx;
 
     // Set registration bits
-    entity1->registrations |= (1ULL << idx2);
-    entity2->registrations |= (1ULL << idx1);
+    player->registrations |= (1ULL << event_idx);
+    event->registrations |= (1ULL << player_idx);
 
-    // Update data relative of tournament distribution of players
-    tournament_construct_groups(entity2);
-    tournament_construct_bracket(entity2);
-    tournament_populate_bracket_from_groups(entity2);
+    // Update tournament bracket/groups
+    tournament_construct_groups(event);
+    tournament_construct_bracket(event);
+    tournament_populate_bracket_from_groups(event);
 }
 
 void
-entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2)
+unregister_player_from_event(PlayersList *players, EventsList *events, String8 player_name, String8 event_name)
 {
-    u32 idx_tail1 = list1->len - 1;
-    u32 idx_tail2 = list2->len - 1;
+    u32 idx_tail_players = players->len - 1;
+    u32 idx_tail_events = events->len - 1;
 
-    u32 idx1 = entity_list_find(list1, name1);
-    assert(idx1 != idx_tail1);
+    u32 player_idx = players_list_find(players, player_name);
+    assert(player_idx != idx_tail_players);
 
-    u32 idx2 = entity_list_find(list2, name2);
-    assert(idx2 != idx_tail2);
+    u32 event_idx = events_list_find(events, event_name);
+    assert(event_idx != idx_tail_events);
 
-    Entity *entity1 = list1->entities + idx1;
-    Entity *entity2 = list2->entities + idx2;
+    Player *player = players->players + player_idx;
+    Event *event = events->events + event_idx;
 
     // Unset the registration bits
-    entity1->registrations &= ~(1ULL << idx2);
-    entity2->registrations &= ~(1ULL << idx1);
+    player->registrations &= ~(1ULL << event_idx);
+    event->registrations &= ~(1ULL << player_idx);
 
-    // Update data relative of tournament distribution of players
-    tournament_construct_groups(entity2);
-    tournament_construct_bracket(entity2);
-    tournament_populate_bracket_from_groups(entity2);
+    // Update tournament bracket/groups
+    tournament_construct_groups(event);
+    tournament_construct_bracket(event);
+    tournament_populate_bracket_from_groups(event);
 }
 
 /**
@@ -250,17 +399,17 @@ entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, Stri
  *   - Player 6 at position 5, Player 8 at position 6 (fight first)
  *   - Winner of 5 vs 6 goes to position 2, fights position 1 for position 0
  *
- * @param tournament The tournament entity to construct bracket for
+ * @param event The event/tournament to construct bracket for
  */
 void
-tournament_construct_bracket(Entity *tournament)
+tournament_construct_bracket(Event *event)
 {
     // Clear the bracket
-    MemoryZeroArray(tournament->bracket);
+    MemoryZeroArray(event->bracket);
 
     // Get all registered players
     s32 positions[64];
-    u32 num_players = find_all_filled_slots(tournament->registrations, positions);
+    u32 num_players = find_all_filled_slots(event->registrations, positions);
 
     if (num_players == 0)
     {
@@ -295,7 +444,7 @@ tournament_construct_bracket(Entity *tournament)
     {
         u32 leaf_pos = leaf_start + i * 2;
         u32 parent_pos = (leaf_pos - 1) / 2;
-        tournament->bracket[parent_pos] = positions[player_idx];
+        event->bracket[parent_pos] = positions[player_idx];
         player_idx++;
     }
 
@@ -304,32 +453,32 @@ tournament_construct_bracket(Entity *tournament)
 
     while (player_idx < num_players)
     {
-        tournament->bracket[fighting_start] = positions[player_idx];
+        event->bracket[fighting_start] = positions[player_idx];
         fighting_start++;
         player_idx++;
     }
 }
 
 void
-tournament_construct_groups(Entity *tournament)
+tournament_construct_groups(Event *event)
 {
     s32 positions[64];
-    u32 num_players = find_all_filled_slots(tournament->registrations, positions);
+    u32 num_players = find_all_filled_slots(event->registrations, positions);
 
     if (num_players == 0)
     {
         return;
     }
 
-    u32 group_size = tournament->group_phase.group_size;
-    u32 advance_per_group = tournament->group_phase.advance_per_group;
+    u32 group_size = event->group_phase.group_size;
+    u32 advance_per_group = event->group_phase.advance_per_group;
 
-    MemoryZeroArray(tournament->group_phase.groups);
-    MemorySet(tournament->group_phase.player_group, GROUP_NONE, MAX_NUM_ENTITIES + 1);
-    MemoryZeroArray(tournament->group_phase.player_slot);
+    MemoryZeroArray(event->group_phase.groups);
+    MemorySet(event->group_phase.player_group, GROUP_NONE, MAX_NUM_ENTITIES + 1);
+    MemoryZeroArray(event->group_phase.player_slot);
 
-    MemoryZeroArray(tournament->group_phase.scores);
-    MemoryZeroArray(tournament->group_phase.results);
+    MemoryZeroArray(event->group_phase.scores);
+    MemoryZeroArray(event->group_phase.results);
 
     // Form groups, distributing players evenly when leftover is too small
     // Example: 14 players with group_size=4 -> (4, 4, 4, 2)
@@ -358,7 +507,7 @@ tournament_construct_groups(Entity *tournament)
         num_groups = num_full_groups + (leftover > 0 ? 1 : 0);
     }
 
-    tournament->group_phase.num_groups = num_groups;
+    event->group_phase.num_groups = num_groups;
 
     u32 player_i = 0;
     for (u32 g = 0; g < num_groups; g++)
@@ -388,9 +537,9 @@ tournament_construct_groups(Entity *tournament)
         for (u32 s = 0; s < players_in_this_group; s++)
         {
             u32 global_idx = positions[player_i];
-            tournament->group_phase.groups[g][s] = global_idx;
-            tournament->group_phase.player_group[global_idx] = g;  // 0-based group index
-            tournament->group_phase.player_slot[global_idx] = s;
+            event->group_phase.groups[g][s] = global_idx;
+            event->group_phase.player_group[global_idx] = g;  // 0-based group index
+            event->group_phase.player_slot[global_idx] = s;
             player_i++;
         }
     }
@@ -404,13 +553,13 @@ tournament_construct_groups(Entity *tournament)
  * 2. Goal difference
  * 3. Goals scored
  *
- * @param tournament        The tournament entity
+ * @param event             The event/tournament
  * @param group_idx         The group index to calculate standings for
  * @param standings         Output array to store player indices sorted by rank
  * @param players_in_group  Number of players in this group
  */
-static void
-calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 players_in_group)
+void
+calculate_group_standings(Event *event, u32 group_idx, u8 *standings, u32 players_in_group)
 {
     // Structure to hold player stats for sorting
     typedef struct {
@@ -425,7 +574,7 @@ calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 
     // Calculate stats for each player in the group
     for (u32 slot = 0; slot < players_in_group; slot++)
     {
-        u8 player_idx = tournament->group_phase.groups[group_idx][slot];
+        u8 player_idx = event->group_phase.groups[group_idx][slot];
         stats[slot].player_idx = player_idx;
 
         // Calculate points and goals from match results
@@ -433,7 +582,7 @@ calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 
         {
             if (slot == opponent) continue;
 
-            MatchScore score = tournament->group_phase.scores[group_idx][slot][opponent];
+            MatchScore score = event->group_phase.scores[group_idx][slot][opponent];
 
             // Add goals scored by this player
             stats[slot].goals_for += score.row_score;
@@ -499,16 +648,16 @@ calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 
  * and places them into the elimination bracket. Seeding is done to avoid
  * players from the same group meeting in early rounds when possible.
  *
- * @param tournament The tournament entity with completed group phase
+ * @param event The event/tournament with completed group phase
  */
 void
-tournament_populate_bracket_from_groups(Entity *tournament)
+tournament_populate_bracket_from_groups(Event *event)
 {
     // Clear the bracket
-    MemoryZeroArray(tournament->group_phase.bracket);
+    MemoryZeroArray(event->group_phase.bracket);
 
-    u32 num_groups = tournament->group_phase.num_groups;
-    u32 advance_per_group = tournament->group_phase.advance_per_group;
+    u32 num_groups = event->group_phase.num_groups;
+    u32 advance_per_group = event->group_phase.advance_per_group;
 
     // Collect all qualifiers from each group
     u8 qualifiers[MAX_GROUPS * MAX_GROUP_SIZE];
@@ -520,7 +669,7 @@ tournament_populate_bracket_from_groups(Entity *tournament)
         u32 players_in_group = 0;
         for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
         {
-            if (tournament->group_phase.groups[g][slot] != 0)
+            if (event->group_phase.groups[g][slot] != 0)
             {
                 players_in_group++;
             }
@@ -528,7 +677,7 @@ tournament_populate_bracket_from_groups(Entity *tournament)
 
         // Get standings for this group
         u8 standings[MAX_GROUP_SIZE];
-        calculate_group_standings(tournament, g, standings, players_in_group);
+        calculate_group_standings(event, g, standings, players_in_group);
 
         // Take top N players from this group
         u32 to_advance = advance_per_group;
@@ -575,7 +724,7 @@ tournament_populate_bracket_from_groups(Entity *tournament)
     {
         u32 leaf_pos = leaf_start + i * 2;
         u32 parent_pos = (leaf_pos - 1) / 2;
-        tournament->group_phase.bracket[parent_pos] = qualifiers[qualifier_idx];
+        event->group_phase.bracket[parent_pos] = qualifiers[qualifier_idx];
         qualifier_idx++;
     }
 
@@ -584,7 +733,7 @@ tournament_populate_bracket_from_groups(Entity *tournament)
 
     while (qualifier_idx < num_qualifiers)
     {
-        tournament->group_phase.bracket[fighting_start] = qualifiers[qualifier_idx];
+        event->group_phase.bracket[fighting_start] = qualifiers[qualifier_idx];
         fighting_start++;
         qualifier_idx++;
     }
@@ -612,16 +761,17 @@ typedef struct SaveHeader {
  * Writes everything to a buffer first, then fwrite once.
  */
 b32
-olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments)
+olympiad_save(Arena *arena, PlayersList *players, EventsList *events)
 {
     // Calculate max buffer size needed
-    // Header + (len+2) entities for both lists
-    // Each entity: nxt(4) + prv(4) + name_len(4) + name(MAX_STRING_SIZE) + registrations(8)
-    //              + medals(3) + phase(1) + format(1) + bracket(BRACKET_SIZE) + group_phase
-    u64 entity_max_size = 4 + 4 + 4 + MAX_STRING_SIZE + 8 + 3 + 1 + 1 + BRACKET_SIZE + sizeof(GroupPhase);
+    // Player: nxt(4) + prv(4) + name_len(4) + name(MAX_STRING_SIZE) + registrations(8)
+    // Event: nxt(4) + prv(4) + name_len(4) + name(MAX_STRING_SIZE) + registrations(8)
+    //        + phase(1) + format(1) + bracket(BRACKET_SIZE) + group_phase
+    u64 player_max_size = 4 + 4 + 4 + MAX_STRING_SIZE + 8;
+    u64 event_max_size = 4 + 4 + 4 + MAX_STRING_SIZE + 8 + 1 + 1 + BRACKET_SIZE + sizeof(GroupPhase);
     u64 players_total = players->len;
-    u64 tournaments_total = tournaments->len;
-    u64 max_size = sizeof(SaveHeader) + (players_total + tournaments_total) * entity_max_size;
+    u64 events_total = events->len;
+    u64 max_size = sizeof(SaveHeader) + players_total * player_max_size + events_total * event_max_size;
 
     u8 *buffer = push_array(arena, u8, max_size);
     u64 offset = 0;
@@ -632,53 +782,38 @@ olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments)
         .version = SAVE_VERSION,
         .players_len = players->len,
         .players_first_free_idx = players->first_free_idx,
-        .tournaments_len = tournaments->len,
-        .tournaments_first_free_idx = tournaments->first_free_idx,
+        .tournaments_len = events->len,
+        .tournaments_first_free_idx = events->first_free_idx,
     };
     MemoryCopy(buffer + offset, &header, sizeof(SaveHeader));
     offset += sizeof(SaveHeader);
 
-    // Write players entities
+    // Write players
     for (u32 i = 0; i < players_total; ++i)
     {
-        Entity *e = &players->entities[i];
+        Player *p = &players->players[i];
 
         // nxt, prv
-        MemoryCopy(buffer + offset, &e->nxt, sizeof(u32)); offset += sizeof(u32);
-        MemoryCopy(buffer + offset, &e->prv, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(buffer + offset, &p->nxt, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(buffer + offset, &p->prv, sizeof(u32)); offset += sizeof(u32);
 
         // name_len + name
-        u32 name_len = (u32)e->name.len;
+        u32 name_len = (u32)p->name.len;
         MemoryCopy(buffer + offset, &name_len, sizeof(u32)); offset += sizeof(u32);
         if (name_len > 0)
         {
-            MemoryCopy(buffer + offset, e->name.str, name_len);
+            MemoryCopy(buffer + offset, p->name.str, name_len);
             offset += name_len;
         }
 
         // registrations
-        MemoryCopy(buffer + offset, &e->registrations, sizeof(u64)); offset += sizeof(u64);
-
-        // medals
-        MemoryCopy(buffer + offset, e->medals, 3); offset += 3;
-
-        // phase, format
-        u8 phase = (u8)e->phase;
-        u8 format = (u8)e->format;
-        buffer[offset++] = phase;
-        buffer[offset++] = format;
-
-        // bracket
-        MemoryCopy(buffer + offset, e->bracket, BRACKET_SIZE); offset += BRACKET_SIZE;
-
-        // group_phase
-        MemoryCopy(buffer + offset, &e->group_phase, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
+        MemoryCopy(buffer + offset, &p->registrations, sizeof(u64)); offset += sizeof(u64);
     }
 
-    // Write tournaments entities
-    for (u32 i = 0; i < tournaments_total; ++i)
+    // Write events
+    for (u32 i = 0; i < events_total; ++i)
     {
-        Entity *e = &tournaments->entities[i];
+        Event *e = &events->events[i];
 
         // nxt, prv
         MemoryCopy(buffer + offset, &e->nxt, sizeof(u32)); offset += sizeof(u32);
@@ -695,9 +830,6 @@ olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments)
 
         // registrations
         MemoryCopy(buffer + offset, &e->registrations, sizeof(u64)); offset += sizeof(u64);
-
-        // medals
-        MemoryCopy(buffer + offset, e->medals, 3); offset += 3;
 
         // phase, format
         u8 phase = (u8)e->phase;
@@ -738,7 +870,7 @@ olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments)
  * Reads entire file with one fread, then parses the buffer.
  */
 b32
-olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
+olympiad_load(Arena *arena, PlayersList *players, EventsList *events)
 {
     FILE *f = fopen("olympiad.sav", "rb");
     if (!f)
@@ -788,9 +920,9 @@ olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
         return false;
     }
 
-    if (header.players_len != players->len || header.tournaments_len != tournaments->len)
+    if (header.players_len != players->len || header.tournaments_len != events->len)
     {
-        printf("EntityList length mismatch\n");
+        printf("List length mismatch\n");
         return false;
     }
 
@@ -800,11 +932,11 @@ olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
 
     for (u32 i = 0; i < players_total; ++i)
     {
-        Entity *e = &players->entities[i];
+        Player *p = &players->players[i];
 
         // nxt, prv
-        MemoryCopy(&e->nxt, buffer + offset, sizeof(u32)); offset += sizeof(u32);
-        MemoryCopy(&e->prv, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(&p->nxt, buffer + offset, sizeof(u32)); offset += sizeof(u32);
+        MemoryCopy(&p->prv, buffer + offset, sizeof(u32)); offset += sizeof(u32);
 
         // name_len + name
         u32 name_len = 0;
@@ -814,39 +946,26 @@ olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
             u8 *name_str = push_array(arena, u8, name_len);
             MemoryCopy(name_str, buffer + offset, name_len);
             offset += name_len;
-            e->name.str = name_str;
-            e->name.len = name_len;
+            p->name.str = name_str;
+            p->name.len = name_len;
         }
         else
         {
-            e->name.str = NULL;
-            e->name.len = 0;
+            p->name.str = NULL;
+            p->name.len = 0;
         }
 
         // registrations
-        MemoryCopy(&e->registrations, buffer + offset, sizeof(u64)); offset += sizeof(u64);
-
-        // medals
-        MemoryCopy(e->medals, buffer + offset, 3); offset += 3;
-
-        // phase, format
-        e->phase = (TournamentPhase)buffer[offset++];
-        e->format = (TournamentFormat)buffer[offset++];
-
-        // bracket
-        MemoryCopy(e->bracket, buffer + offset, BRACKET_SIZE); offset += BRACKET_SIZE;
-
-        // group_phase
-        MemoryCopy(&e->group_phase, buffer + offset, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
+        MemoryCopy(&p->registrations, buffer + offset, sizeof(u64)); offset += sizeof(u64);
     }
 
-    // Load tournaments
-    tournaments->first_free_idx = header.tournaments_first_free_idx;
-    u32 tournaments_total = tournaments->len;
+    // Load events
+    events->first_free_idx = header.tournaments_first_free_idx;
+    u32 events_total = events->len;
 
-    for (u32 i = 0; i < tournaments_total; ++i)
+    for (u32 i = 0; i < events_total; ++i)
     {
-        Entity *e = &tournaments->entities[i];
+        Event *e = &events->events[i];
 
         // nxt, prv
         MemoryCopy(&e->nxt, buffer + offset, sizeof(u32)); offset += sizeof(u32);
@@ -871,9 +990,6 @@ olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
 
         // registrations
         MemoryCopy(&e->registrations, buffer + offset, sizeof(u64)); offset += sizeof(u64);
-
-        // medals
-        MemoryCopy(e->medals, buffer + offset, 3); offset += 3;
 
         // phase, format
         e->phase = (TournamentPhase)buffer[offset++];
