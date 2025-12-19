@@ -78,8 +78,16 @@ main(void)
     data.chartZoomLevel       = 1.0f;
     data.groupMatrixZoomLevel = 1.0f;
 
+    f64 lastSaveTime = 0;
     while (!WindowShouldClose())
     {
+        f64 currentTime = GetTime();
+        if (currentTime - lastSaveTime > 30.0)
+        {
+            olympiad_save(&players_list, &events_list);
+            lastSaveTime = currentTime;
+        }
+
         Clay_SetLayoutDimensions((Clay_Dimensions) {
             .width = GetScreenWidth(),
             .height = GetScreenHeight()
@@ -123,7 +131,7 @@ main(void)
     }
 
     // Save state before closing
-    if (olympiad_save(arena, &data.players, &data.tournaments))
+    if (olympiad_save(&data.players, &data.tournaments))
     {
         printf("State saved\n");
     }

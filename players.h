@@ -17,6 +17,9 @@
 
 #define MAX_STRING_SIZE 64 // Maximum size players and tournaments names
 
+const char *olympiad_save_file = "olympiad.sav";
+const char *olympiad_temp_file = "olympiad.tmp";
+
 typedef enum TournamentFormat {
     FORMAT_KNOCKOUT  = 0,   // Pure single elimination
     FORMAT_GROUP_KNOCKOUT,  // Groups then knockout (World Cup style)
@@ -135,7 +138,7 @@ void calculate_group_standings(Event *event, u32 group_idx, u8 *standings, u32 p
 void tournament_populate_bracket_from_groups(Event *event);
 
 // Save/Load functions
-b32 olympiad_save(Arena *arena, PlayersList *players, EventsList *events);
+b32 olympiad_save(PlayersList *players, EventsList *events);
 b32 olympiad_load(Arena *arena, PlayersList *players, EventsList *events);
 
 #endif // PLAYERS_H

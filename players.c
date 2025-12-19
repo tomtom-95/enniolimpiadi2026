@@ -761,7 +761,7 @@ typedef struct SaveHeader {
  * Writes everything to a buffer first, then fwrite once.
  */
 b32
-olympiad_save(Arena *arena, PlayersList *players, EventsList *events)
+olympiad_save(PlayersList *players, EventsList *events)
 {
     // Calculate max buffer size needed
     // Player: nxt(4) + prv(4) + name_len(4) + name(MAX_STRING_SIZE) + registrations(8)
@@ -773,7 +773,9 @@ olympiad_save(Arena *arena, PlayersList *players, EventsList *events)
     u64 events_total = events->len;
     u64 max_size = sizeof(SaveHeader) + players_total * player_max_size + events_total * event_max_size;
 
-    u8 *buffer = push_array(arena, u8, max_size);
+    Temp temp = scratch_get(0, 0);
+
+    u8 *buffer = push_array(temp.arena, u8, max_size);
     u64 offset = 0;
 
     // Write header
@@ -844,23 +846,34 @@ olympiad_save(Arena *arena, PlayersList *players, EventsList *events)
         MemoryCopy(buffer + offset, &e->group_phase, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
     }
 
-    // Single fwrite
-    FILE *f = fopen("olympiad.sav", "wb");
+    // Write to temp file first (atomic write pattern)
+    FILE *f = fopen(olympiad_temp_file, "wb");
     if (!f)
     {
-        printf("Failed to open olympiad.sav for writing\n");
+        printf("Failed to open temp file for writing\n");
         return false;
     }
 
     if (fwrite(buffer, 1, offset, f) != offset)
     {
-        printf("Failed to write save file\n");
+        printf("Failed to write temp file\n");
         fclose(f);
         return false;
     }
 
+    scratch_release(temp);
     fclose(f);
+
+    // Atomic rename: remove old file (required on Windows), then rename temp to final
+    remove(olympiad_save_file);
+    if (rename(olympiad_temp_file, olympiad_save_file) != 0)
+    {
+        printf("Failed to rename temp file to save file\n");
+        return false;
+    }
+
     printf("Saved to olympiad.sav (%llu bytes)\n", offset);
+
     return true;
 }
 
@@ -872,7 +885,7 @@ olympiad_save(Arena *arena, PlayersList *players, EventsList *events)
 b32
 olympiad_load(Arena *arena, PlayersList *players, EventsList *events)
 {
-    FILE *f = fopen("olympiad.sav", "rb");
+    FILE *f = fopen(olympiad_save_file, "rb");
     if (!f)
     {
         printf("Cannot open olympiad.sav\n");
@@ -891,8 +904,10 @@ olympiad_load(Arena *arena, PlayersList *players, EventsList *events)
         return false;
     }
 
+    Temp temp = scratch_get(0, 0);
+
     // Single fread into buffer
-    u8 *buffer = push_array(arena, u8, file_size);
+    u8 *buffer = push_array(temp.arena, u8, file_size);
     if (fread(buffer, 1, file_size, f) != (size_t)file_size)
     {
         printf("Failed to read save file\n");
@@ -1002,6 +1017,9 @@ olympiad_load(Arena *arena, PlayersList *players, EventsList *events)
         MemoryCopy(&e->group_phase, buffer + offset, sizeof(GroupPhase)); offset += sizeof(GroupPhase);
     }
 
+    scratch_release(temp);
+
     printf("Loaded from olympiad.sav (%llu bytes)\n", offset);
+
     return true;
 }
