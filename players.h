@@ -17,9 +17,6 @@
 
 #define MAX_STRING_SIZE 64 // Maximum size players and tournaments names
 
-#define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)
-#define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)
-
 typedef enum TournamentFormat {
     FORMAT_KNOCKOUT,        // Pure single elimination
     FORMAT_GROUP_KNOCKOUT,  // Groups then knockout (World Cup style)
@@ -73,8 +70,8 @@ typedef struct GroupPhase {
 
 typedef struct Entity Entity;
 struct Entity {
-    u32 nxt;
     u32 prv;
+    u32 nxt;
     String8 name;
 
     // I am assuming the entity will never have more than 64 registration

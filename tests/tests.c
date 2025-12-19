@@ -152,7 +152,7 @@ test_pool_double_free(void)
 void
 test_players(void)
 {
-    Arena *arena = arena_alloc(MegaByte(1));
+    Arena *arena = arena_alloc(MegaByte(10));
 
     EntityList players = entity_list_init(arena, 64);
     EntityList tournaments = entity_list_init(arena, 64);
@@ -176,10 +176,10 @@ test_players(void)
     entity_list_register(&players, &tournaments, aldo, pingpong);
 
     u32 idx_aldo = entity_list_find(&players, aldo);
-    assert((players.entities + idx_aldo)->registrations == 0x0000000000000001);
+    assert((players.entities + idx_aldo)->registrations == 0x0000000000000002);
 
     u32 idx_pingpong = entity_list_find(&tournaments, pingpong);
-    assert((tournaments.entities + idx_pingpong)->registrations == 0x0000000000000001);
+    assert((tournaments.entities + idx_pingpong)->registrations == 0x0000000000000002);
 
     entity_list_remove(&players, &tournaments, aldo);
     assert((tournaments.entities + idx_pingpong)->registrations == 0x0000000000000000);
@@ -188,7 +188,7 @@ test_players(void)
 void
 test_unregistration(void)
 {
-    Arena *arena = arena_alloc(MegaByte(1));
+    Arena *arena = arena_alloc(MegaByte(10));
 
     EntityList players = entity_list_init(arena, 64);
     EntityList tournaments = entity_list_init(arena, 64);
@@ -213,8 +213,8 @@ test_unregistration(void)
     u32 idx_pingpong = entity_list_find(&tournaments, pingpong);
 
     entity_list_register(&players, &tournaments, aldo, pingpong);
-    assert((tournaments.entities + idx_aldo)->registrations == 1);
-    assert((tournaments.entities + idx_pingpong)->registrations == 1);
+    assert((tournaments.entities + idx_aldo)->registrations == 2);
+    assert((tournaments.entities + idx_pingpong)->registrations == 2);
 
     entity_list_unregister(&players, &tournaments, aldo, pingpong);
     assert((tournaments.entities + idx_aldo)->registrations == 0);

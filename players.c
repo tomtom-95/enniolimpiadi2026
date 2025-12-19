@@ -37,21 +37,23 @@ entity_list_init(Arena *arena, u32 len)
 {
     assert(len <= MAX_NUM_ENTITIES);
 
-    // Allocate 2 nodes more than MAX_NUM_PLAYERS for the dummy head and tail nodes
-    Entity *entities = push_array(arena, Entity, len + 2);
+    Entity *entities = push_array(arena, Entity, len);
 
-    u32 tail_idx = len + 1;
+    u32 idx_tail = len - 1;
 
     // Link head and tail sentinel
-    entities->nxt = len + 1;
-    (entities + tail_idx)->prv = 0;
+    Entity *head = entities;
+    Entity *tail = entities + idx_tail;
 
-    EntityList entity_list = {.entities = entities, .first_free_idx = 1, .len = len};
+    head->nxt = idx_tail;
+    tail->prv = 0;
 
     // Initialize the free list
-    for (u32 i = 1; i < len + 1; ++i)
+    EntityList entity_list = { .entities = entities, .first_free_idx = 1, .len = len };
+
+    for (u32 i = 1; i < idx_tail; ++i)
     {
-        entity_list.entities[i].nxt = (i + 1) % tail_idx;
+        entity_list.entities[i].nxt = i + 1;
         entity_list.entities[i].phase = PHASE_REGISTRATION;
     }
 
@@ -61,7 +63,7 @@ entity_list_init(Arena *arena, u32 len)
 u32
 entity_list_find(EntityList *entity_list, String8 name)
 {
-    u32 idx_tail = entity_list->len + 1;
+    u32 idx_tail = entity_list->len - 1;
 
     u32 idx = entity_list->entities->nxt;
     while (idx != idx_tail)
@@ -79,15 +81,15 @@ entity_list_find(EntityList *entity_list, String8 name)
 }
 
 u32
-entity_list_count(EntityList *list)
+entity_list_count(EntityList *entity_list)
 {
-    u32 idx_tail = list->len + 1;
-    u32 idx = list->entities->nxt;
+    u32 idx_tail = entity_list->len - 1;
 
+    u32 idx = entity_list->entities->nxt;
     u32 count = 0;
     while (idx != idx_tail)
     {
-        idx = (list->entities + idx)->nxt;
+        idx = (entity_list->entities + idx)->nxt;
         ++count;
     }
 
@@ -97,33 +99,28 @@ entity_list_count(EntityList *list)
 u32
 entity_list_add(EntityList *entity_list, String8 name)
 {
-    u32 idx_tail = entity_list->len + 1;
+    u32 idx_tail = entity_list->len - 1;
 
     // Make sure there is not already a player with this name
     assert(entity_list_find(entity_list, name) == idx_tail);
 
-    u32 first_free_idx = entity_list->first_free_idx;
+    u32 idx_entity = entity_list->first_free_idx;
+    assert(idx_entity != idx_tail);
 
-    // There are no elements in the free list
-    // TODO: instead of hard crash must be implemented a mechanism for growing the entities array
-    //       which is to move the backing array into a new allocation (2x bigger)
-    assert(first_free_idx != 0);
+    Entity *head = entity_list->entities;
 
-    // Pointer to the node that will be used
-    Entity *entity = entity_list->entities + first_free_idx;
+    u32 idx_next = head->nxt;
+
+    Entity *entity = head + idx_entity;
+    Entity *next   = head + idx_next;
 
     // Move the first free
-    entity_list->first_free_idx = (entity_list->entities + first_free_idx)->nxt;
+    entity_list->first_free_idx = entity->nxt;
 
-    // Add player on top of the list
-    u32 idx = (entity_list->entities)->nxt;
-
-    (entity_list->entities)->nxt = first_free_idx;
-
+    head->nxt   = idx_entity;
     entity->prv = 0;
-    entity->nxt = idx;
-
-    (entity_list->entities + idx)->prv = first_free_idx;
+    entity->nxt = idx_next;
+    next->prv   = idx_entity;
 
     // Fill the node with data
     entity->name.len = name.len;
@@ -136,41 +133,48 @@ entity_list_add(EntityList *entity_list, String8 name)
     entity->group_phase.group_size = 4;
     entity->group_phase.advance_per_group = 2;
 
-    return first_free_idx;
+    return idx_entity;
 }
 
 void
-entity_list_rename(EntityList *entity_list, u32 idx, String8 new_name)
+entity_list_rename(EntityList *entity_list, u32 idx, String8 name)
 {
-    u32 idx_tail = entity_list->len + 1;
+    u32 idx_tail = entity_list->len - 1;
 
     // Check if another active entity already has this name
-    u32 existing_idx = entity_list_find(entity_list, new_name);
+    u32 existing_idx = entity_list_find(entity_list, name);
     assert(existing_idx == idx_tail || existing_idx == idx);
 
-    // No duplicate found, perform the rename
+    // No duplicate found, the entity can be renamed
     Entity *entity = entity_list->entities + idx;
-    entity->name = new_name;
+    entity->name = name;
 }
 
 void
 entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
 {
-    u32 idx_tail = list1->len + 1;
+    u32 idx_tail = list1->len - 1;
 
     u32 idx = entity_list_find(list1, name);
     assert(idx != idx_tail);
 
-    Entity *entity = list1->entities + idx;
+    Entity *head1 = list1->entities;
+    Entity *entity = head1 + idx;
+
+    u32 idx_prv = entity->prv;
+    u32 idx_nxt = entity->nxt;
+
+    Entity *prev = head1 + idx_prv;
+    Entity *next = head1 + idx_nxt;
 
     s32 positions[64] = {0};
     u32 count = find_all_filled_slots((list1->entities + idx)->registrations, positions);
     for (u32 i = 0; i < count; ++i)
     {
-        Entity *entity2 = list2->entities + positions[i] + 1;
+        Entity *entity2 = list2->entities + positions[i];
 
-        // Set a bit at position (idx - 1) to 0
-        entity2->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx));
+        // Set a bit at position idx to 0
+        entity2->registrations &= ~(1ULL << idx);
 
         // Update data relative of tournament distribution of players
         tournament_construct_groups(entity2);
@@ -178,8 +182,8 @@ entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
         tournament_populate_bracket_from_groups(entity2);
     }
 
-    (list1->entities + entity->prv)->nxt = entity->nxt;
-    (list1->entities + entity->nxt)->prv = entity->prv;
+    prev->nxt = idx_nxt;
+    next->prv = idx_prv;
 
     entity->nxt = list1->first_free_idx;
     list1->first_free_idx = idx;
@@ -188,8 +192,8 @@ entity_list_remove(EntityList *list1, EntityList *list2, String8 name)
 void
 entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String8 name2)
 {
-    u32 idx_tail1 = list1->len + 1;
-    u32 idx_tail2 = list2->len + 1;
+    u32 idx_tail1 = list1->len - 1;
+    u32 idx_tail2 = list2->len - 1;
 
     u32 idx1 = entity_list_find(list1, name1);
     assert(idx1 != idx_tail1);
@@ -201,8 +205,8 @@ entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String
     Entity *entity2 = list2->entities + idx2;
 
     // Set registration bits
-    entity1->registrations |= (1ULL << ENTITY_IDX_TO_BIT(idx2));
-    entity2->registrations |= (1ULL << ENTITY_IDX_TO_BIT(idx1));
+    entity1->registrations |= (1ULL << idx2);
+    entity2->registrations |= (1ULL << idx1);
 
     // Update data relative of tournament distribution of players
     tournament_construct_groups(entity2);
@@ -213,8 +217,8 @@ entity_list_register(EntityList *list1, EntityList *list2, String8 name1, String
 void
 entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, String8 name2)
 {
-    u32 idx_tail1 = list1->len + 1;
-    u32 idx_tail2 = list2->len + 1;
+    u32 idx_tail1 = list1->len - 1;
+    u32 idx_tail2 = list2->len - 1;
 
     u32 idx1 = entity_list_find(list1, name1);
     assert(idx1 != idx_tail1);
@@ -226,8 +230,8 @@ entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, Stri
     Entity *entity2 = list2->entities + idx2;
 
     // Unset the registration bits
-    entity1->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx2));
-    entity2->registrations &= ~(1ULL << ENTITY_IDX_TO_BIT(idx1));
+    entity1->registrations &= ~(1ULL << idx2);
+    entity2->registrations &= ~(1ULL << idx1);
 
     // Update data relative of tournament distribution of players
     tournament_construct_groups(entity2);
@@ -251,7 +255,6 @@ entity_list_unregister(EntityList *list1, EntityList *list2, String8 name1, Stri
 void
 tournament_construct_bracket(Entity *tournament)
 {
-
     // Clear the bracket
     MemoryZeroArray(tournament->bracket);
 
@@ -292,7 +295,7 @@ tournament_construct_bracket(Entity *tournament)
     {
         u32 leaf_pos = leaf_start + i * 2;
         u32 parent_pos = (leaf_pos - 1) / 2;
-        tournament->bracket[parent_pos] = BIT_TO_ENTITY_IDX(positions[player_idx]);
+        tournament->bracket[parent_pos] = positions[player_idx];
         player_idx++;
     }
 
@@ -301,7 +304,7 @@ tournament_construct_bracket(Entity *tournament)
 
     while (player_idx < num_players)
     {
-        tournament->bracket[fighting_start] = BIT_TO_ENTITY_IDX(positions[player_idx]);
+        tournament->bracket[fighting_start] = positions[player_idx];
         fighting_start++;
         player_idx++;
     }
@@ -384,7 +387,7 @@ tournament_construct_groups(Entity *tournament)
 
         for (u32 s = 0; s < players_in_this_group; s++)
         {
-            u32 global_idx = BIT_TO_ENTITY_IDX(positions[player_i]);
+            u32 global_idx = positions[player_i];
             tournament->group_phase.groups[g][s] = global_idx;
             tournament->group_phase.player_group[global_idx] = g;  // 0-based group index
             tournament->group_phase.player_slot[global_idx] = s;
@@ -401,10 +404,10 @@ tournament_construct_groups(Entity *tournament)
  * 2. Goal difference
  * 3. Goals scored
  *
- * @param tournament      The tournament entity
- * @param group_idx       The group index to calculate standings for
- * @param standings       Output array to store player indices sorted by rank
- * @param players_in_group Number of players in this group
+ * @param tournament        The tournament entity
+ * @param group_idx         The group index to calculate standings for
+ * @param standings         Output array to store player indices sorted by rank
+ * @param players_in_group  Number of players in this group
  */
 static void
 calculate_group_standings(Entity *tournament, u32 group_idx, u8 *standings, u32 players_in_group)
@@ -616,8 +619,8 @@ olympiad_save(Arena *arena, EntityList *players, EntityList *tournaments)
     // Each entity: nxt(4) + prv(4) + name_len(4) + name(MAX_STRING_SIZE) + registrations(8)
     //              + medals(3) + phase(1) + format(1) + bracket(BRACKET_SIZE) + group_phase
     u64 entity_max_size = 4 + 4 + 4 + MAX_STRING_SIZE + 8 + 3 + 1 + 1 + BRACKET_SIZE + sizeof(GroupPhase);
-    u64 players_total = players->len + 2;
-    u64 tournaments_total = tournaments->len + 2;
+    u64 players_total = players->len;
+    u64 tournaments_total = tournaments->len;
     u64 max_size = sizeof(SaveHeader) + (players_total + tournaments_total) * entity_max_size;
 
     u8 *buffer = push_array(arena, u8, max_size);
@@ -793,7 +796,7 @@ olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
 
     // Load players
     players->first_free_idx = header.players_first_free_idx;
-    u32 players_total = players->len + 2;
+    u32 players_total = players->len;
 
     for (u32 i = 0; i < players_total; ++i)
     {
@@ -839,7 +842,7 @@ olympiad_load(Arena *arena, EntityList *players, EntityList *tournaments)
 
     // Load tournaments
     tournaments->first_free_idx = header.tournaments_first_free_idx;
-    u32 tournaments_total = tournaments->len + 2;
+    u32 tournaments_total = tournaments->len;
 
     for (u32 i = 0; i < tournaments_total; ++i)
     {

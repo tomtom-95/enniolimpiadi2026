@@ -365,7 +365,7 @@ HandleAddEventButtonInteraction(Clay_ElementId elementId, Clay_PointerData point
         if (eventNameStripped.len != 0)
         {
             // Check if event with this name already exists
-            u32 idx_tail = data.tournaments.len + 1;
+            u32 idx_tail = data.tournaments.len - 1;
             u32 existing_idx = entity_list_find(&data.tournaments, eventNameStripped);
             if (existing_idx != idx_tail)
             {
@@ -392,7 +392,7 @@ HandleAddPlayerButtonInteraction(Clay_ElementId elementId, Clay_PointerData poin
         if (playerNameStripped.len != 0)
         {
             // Check if player with this name already exists
-            u32 idx_tail = data.players.len + 1;
+            u32 idx_tail = data.players.len - 1;
             u32 existing_idx = entity_list_find(&data.players, playerNameStripped);
             if (existing_idx != idx_tail)
             {
@@ -418,7 +418,7 @@ HandleTogglePlayerRegistration(Clay_ElementId elementId, Clay_PointerData pointe
         Entity *tournament = data.tournaments.entities + data.selectedTournamentIdx;
 
         // Check if player is already registered to this tournament
-        bool is_registered = (player->registrations >> ENTITY_IDX_TO_BIT(data.selectedTournamentIdx)) & 1;
+        bool is_registered = (player->registrations >> data.selectedTournamentIdx) & 1;
 
         if (is_registered)
         {
@@ -685,7 +685,7 @@ HandleConfirmRenameEvent(Clay_ElementId elementId, Clay_PointerData pointerData,
                 String8 new_name = str8_copy(data.arena, str8((u8 *)input->buffer, input->len));
 
                 // Check if another event with this name already exists
-                u32 idx_tail = data.tournaments.len + 1;
+                u32 idx_tail = data.tournaments.len - 1;
                 u32 existing_idx = entity_list_find(&data.tournaments, new_name);
                 if (existing_idx != idx_tail && existing_idx != data.renamingEventIdx)
                 {
@@ -762,7 +762,7 @@ HandleConfirmRenamePlayer(Clay_ElementId elementId, Clay_PointerData pointerData
                 String8 new_name = str8_copy(data.arena, str8((u8 *)input->buffer, input->len));
 
                 // Check if another player with this name already exists
-                u32 idx_tail = data.players.len + 1;
+                u32 idx_tail = data.players.len - 1;
                 u32 existing_idx = entity_list_find(&data.players, new_name);
                 if (existing_idx != idx_tail && existing_idx != data.renamingPlayerIdx)
                 {
@@ -874,7 +874,6 @@ typedef struct {
 void
 HandleMatrixCellClick(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
 {
-    (void)elementId;
     MatrixCellData *cellData = (MatrixCellData *)userData;
 
     // Only allow score entry when tournament is in progress
@@ -1998,7 +1997,7 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
         }
         for (u32 i = 0; i < registered_count; i++)
         {
-            u32 player_idx = BIT_TO_ENTITY_IDX(registered_positions[i]);
+            u32 player_idx = registered_positions[i];
             Entity *player = data.players.entities + player_idx;
 
             CLAY(CLAY_IDI("RegisteredPlayer", player_idx), {
@@ -2082,12 +2081,12 @@ RenderRegistrationPanel(u32 tournament_idx, Entity *tournament,
         .backgroundColor = dashCardBg,
         .cornerRadius = { 0, 0, 8, 8 }
     }) {
-        u32 idx_tail = data.players.len + 1;
+        u32 idx_tail = data.players.len - 1;
         u32 idx = (data.players.entities)->nxt;
         while (idx != idx_tail)
         {
             Entity *player = data.players.entities + idx;
-            bool is_registered = (player->registrations >> ENTITY_IDX_TO_BIT(tournament_idx)) & 1;
+            bool is_registered = (player->registrations >> tournament_idx) & 1;
 
             if (!is_registered)
             {
@@ -2346,7 +2345,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
         }) {
             for (u32 i = 0; i < registered_count; i++)
             {
-                u32 player_idx = BIT_TO_ENTITY_IDX(registered_positions[i]);
+                u32 player_idx = registered_positions[i];
                 Entity *player = data.players.entities + player_idx;
 
                 CLAY(CLAY_IDI("PlayerListItem", player_idx), {
@@ -3548,7 +3547,7 @@ RenderEventsList(void)
             }
 
             // Event rows
-            u32 idx_tail = data.tournaments.len + 1;
+            u32 idx_tail = data.tournaments.len - 1;
             u32 idx = (data.tournaments.entities)->nxt;
             while (idx != idx_tail)
             {
@@ -3866,7 +3865,7 @@ RenderPlayersList(void)
             }
 
             // Player rows
-            u32 idx_tail = data.players.len + 1;
+            u32 idx_tail = data.players.len - 1;
             u32 idx = (data.players.entities)->nxt;
             while (idx != idx_tail)
             {
@@ -4230,7 +4229,7 @@ RenderPlayerDetail(u32 player_idx)
                     {
                         for (u32 i = 0; i < registration_count; i++)
                         {
-                            u32 tournament_idx = BIT_TO_ENTITY_IDX(registered_tournaments[i]);
+                            u32 tournament_idx = registered_tournaments[i];
                             RenderPlayerEventRow(tournament_idx, player_idx);
                         }
                     }

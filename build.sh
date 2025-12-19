@@ -36,12 +36,13 @@ fi
 
 # Show help message
 show_help() {
-    echo "Usage: $0 [-p] [debug|tests|release|clean]"
+    echo "Usage: $0 [-p] [debug|tests|generate|release|clean]"
     echo
     echo "  -p               Run preprocessor only (outputs .i file)"
     echo
     echo "  debug            Compile $SRC -> $DEBUG_OUT (with AddressSanitizer)"
     echo "  tests            Compile tests.c -> tests"
+    echo "  generate         Compile generate_save.c -> generate_save (creates olympiad.sav)"
     echo "  release          Compile $SRC -> $RELEASE_OUT (distributable, statically linked)"
     echo "  clean            Remove the build directory"
     echo
@@ -92,6 +93,10 @@ case "$1" in
             echo "Compiling tests.c -> tests"
             clang $DEBUG_CFLAGS tests/tests.c -o $BUILD_DIR/tests $DEBUG_RAYLIB
         fi
+        ;;
+    generate)
+        echo "Compiling generate_save.c -> generate_save"
+        clang $DEBUG_CFLAGS generate_save.c -o $BUILD_DIR/generate_save
         ;;
     release)
         echo "Compiling $SRC -> $RELEASE_OUT (release build, statically linked)"

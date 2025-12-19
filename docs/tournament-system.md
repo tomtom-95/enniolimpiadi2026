@@ -269,8 +269,6 @@ This ensures that if a player was advanced multiple rounds by mistake, all their
 #define MAX_NUM_ENTITIES 64      // Max players/tournaments
 #define BRACKET_SIZE 127         // 64+32+16+8+4+2+1 = 127 nodes
 
-#define ENTITY_IDX_TO_BIT(idx)  ((idx) - 1)  // Entity index to bitmap bit
-#define BIT_TO_ENTITY_IDX(bit)  ((bit) + 1)  // Bitmap bit to entity index
 ```
 
 ---
@@ -295,7 +293,7 @@ bool registered = (player->registrations >> ENTITY_IDX_TO_BIT(tournament_idx)) &
 ```c
 s32 positions[64];
 u32 count = find_all_filled_slots(tournament->registrations, positions);
-// positions[] now contains bit positions (use BIT_TO_ENTITY_IDX to get player indices)
+// positions[] now contains bit positions
 ```
 
 ---
