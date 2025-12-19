@@ -114,6 +114,7 @@ Raylib_MeasureText(Clay_StringSlice text, Clay_TextElementConfig *config, void *
 void Clay_Raylib_Initialize(int width, int height, const char *title, unsigned int flags) {
     SetConfigFlags(flags);
     InitWindow(width, height, title);
+    SetWindowMinSize(1000, 600);
 
     // Enable to redraw every frame, not only when input is detected
     // EnableEventWaiting();

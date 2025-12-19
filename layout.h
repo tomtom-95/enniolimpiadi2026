@@ -292,6 +292,7 @@ void RenderPlayerEventRow(u32 tournament_idx, u32 player_idx);
 void RenderPlayerGoBackButton(void);
 void RenderPlayerBanner(u32 player_idx);
 void RenderPlayerDetail(u32 player_idx);
+void RenderAvailableEventRow(u32 tournament_idx, u32 player_idx);
 
 // Main Pages
 void RenderPlayers(void);

@@ -3586,56 +3586,64 @@ RenderEventsList(void)
                 }
             }
 
-            // Event rows
-            u32 idx_tail = data.tournaments.len - 1;
-            u32 idx = (data.tournaments.events)->nxt;
-            while (idx != idx_tail)
-            {
-                Event *tournament = data.tournaments.events + idx;
+            CLAY(CLAY_ID("EventListRows"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = layoutExpand
+                },
+                .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
+            }) {
+                // Event rows
+                u32 idx_tail = data.tournaments.len - 1;
+                u32 idx = (data.tournaments.events)->nxt;
+                while (idx != idx_tail)
+                {
+                    Event *tournament = data.tournaments.events + idx;
 
-                CLAY(CLAY_IDI("EventRow", idx), {
-                    .layout = {
-                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                        .childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
-                        .padding = { 20, 20, 12, 12 }
-                    },
-                    .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
-                }) {
-                    // Event name
-                    CLAY(CLAY_IDI("EventName", idx), {
+                    CLAY(CLAY_IDI("EventRow", idx), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_GROW(0) },
-                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
-                        }
+                            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                            .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
+                            .padding = { 20, 20, 12, 12 }
+                        },
+                        .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
                     }) {
-                        CLAY_TEXT(str8_to_clay(tournament->name), CLAY_TEXT_CONFIG({
-                            .fontId = FONT_ID_BODY_16,
-                            .fontSize = 18,
-                            .textColor = dashAccentPurple
-                        }));
+                        // Event name
+                        CLAY(CLAY_IDI("EventName", idx), {
+                            .layout = {
+                                .sizing = { .width = CLAY_SIZING_GROW(0) },
+                                .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
+                            }
+                        }) {
+                            CLAY_TEXT(str8_to_clay(tournament->name), CLAY_TEXT_CONFIG({
+                                .fontId = FONT_ID_BODY_16,
+                                .fontSize = 18,
+                                .textColor = dashAccentPurple
+                            }));
+                        }
+
+                        // Number of players registered
+                        CLAY(CLAY_IDI("EventPlayers", idx), {
+                            .layout = {
+                                .sizing = { .width = CLAY_SIZING_FIXED(150) },
+                                .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
+                            }
+                        }) {
+                            s32 positions[64];
+                            u32 count = find_all_filled_slots(tournament->registrations, positions);
+                            CLAY_TEXT(str8_to_clay(str8_from_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
+                                .fontId = FONT_ID_PRESS_START_2P,
+                                .fontSize = 24,
+                                .textColor = dashAccentTeal
+                            }));
+                        }
+
+                        RenderEventsActions(idx);
                     }
 
-                    // Number of players registered
-                    CLAY(CLAY_IDI("EventPlayers", idx), {
-                        .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIXED(150) },
-                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
-                        }
-                    }) {
-                        s32 positions[64];
-                        u32 count = find_all_filled_slots(tournament->registrations, positions);
-                        CLAY_TEXT(str8_to_clay(str8_from_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
-                            .fontId = FONT_ID_PRESS_START_2P,
-                            .fontSize = 24,
-                            .textColor = dashAccentTeal
-                        }));
-                    }
-
-                    RenderEventsActions(idx);
+                    idx = tournament->nxt;
                 }
-
-                idx = tournament->nxt;
             }
         }
     }
@@ -3661,7 +3669,6 @@ RenderEvents(void)
                 .padding = { 8, 8, 8, 8 }
             },
             .backgroundColor = dashBgGradientTop,
-            .clip = { .horizontal = true, .childOffset = Clay_GetScrollOffset() }
         }) {
             RenderEventsBanner();
             RenderEventsHeader();
@@ -3858,7 +3865,7 @@ RenderPlayersList(void)
                 .childGap = 2,
             },
             .backgroundColor = dashCardBg,
-            .cornerRadius = { 0, 0, 12, 12 }
+            .cornerRadius = { 0, 0, 12, 12 },
         }) {
             // List header
             CLAY(CLAY_ID("PlayersListHeader"), {
@@ -3904,56 +3911,64 @@ RenderPlayersList(void)
                 }
             }
 
-            // Player rows
-            u32 idx_tail = data.players.len - 1;
-            u32 idx = (data.players.players)->nxt;
-            while (idx != idx_tail)
-            {
-                Player *player = data.players.players + idx;
+            CLAY(CLAY_ID("PlayerListRows"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = layoutExpand
+                },
+                .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
+            }) {
+                // Player rows
+                u32 idx_tail = data.players.len - 1;
+                u32 idx = (data.players.players)->nxt;
+                while (idx != idx_tail)
+                {
+                    Player *player = data.players.players + idx;
 
-                CLAY(CLAY_IDI("PlayerRow", idx), {
-                    .layout = {
-                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                        .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
-                        .childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
-                        .padding = { 20, 20, 12, 12 }
-                    },
-                    .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
-                }) {
-                    // Player name
-                    CLAY(CLAY_IDI("PlayerName", idx), {
+                    CLAY(CLAY_IDI("PlayerRow", idx), {
                         .layout = {
-                            .sizing = { .width = CLAY_SIZING_GROW(0) },
-                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
-                        }
+                            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                            .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
+                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER },
+                            .padding = { 20, 20, 12, 12 }
+                        },
+                        .backgroundColor = Clay_Hovered() ? dashBgGradientTop : dashCardBg
                     }) {
-                        CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
-                            .fontId = FONT_ID_BODY_16,
-                            .fontSize = 18,
-                            .textColor = dashAccentPurple
-                        }));
+                        // Player name
+                        CLAY(CLAY_IDI("PlayerName", idx), {
+                            .layout = {
+                                .sizing = { .width = CLAY_SIZING_GROW(0) },
+                                .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
+                            }
+                        }) {
+                            CLAY_TEXT(str8_to_clay(player->name), CLAY_TEXT_CONFIG({
+                                .fontId = FONT_ID_BODY_16,
+                                .fontSize = 18,
+                                .textColor = dashAccentPurple
+                            }));
+                        }
+
+                        // Number of registrations
+                        CLAY(CLAY_IDI("PlayerRegistrations", idx), {
+                            .layout = {
+                                .sizing = { .width = CLAY_SIZING_FIXED(150) },
+                                .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
+                            }
+                        }) {
+                            s32 positions[64];
+                            u32 count = find_all_filled_slots(player->registrations, positions);
+                            CLAY_TEXT(str8_to_clay(str8_from_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
+                                .fontId = FONT_ID_PRESS_START_2P,
+                                .fontSize = 24,
+                                .textColor = dashAccentTeal
+                            }));
+                        }
+
+                        RenderPlayersActions(idx);
                     }
 
-                    // Number of registrations
-                    CLAY(CLAY_IDI("PlayerRegistrations", idx), {
-                        .layout = {
-                            .sizing = { .width = CLAY_SIZING_FIXED(150) },
-                            .childAlignment = { .y = CLAY_ALIGN_Y_CENTER }
-                        }
-                    }) {
-                        s32 positions[64];
-                        u32 count = find_all_filled_slots(player->registrations, positions);
-                        CLAY_TEXT(str8_to_clay(str8_from_u32(data.frameArena, count)), CLAY_TEXT_CONFIG({
-                            .fontId = FONT_ID_PRESS_START_2P,
-                            .fontSize = 24,
-                            .textColor = dashAccentTeal
-                        }));
-                    }
-
-                    RenderPlayersActions(idx);
+                    idx = player->nxt;
                 }
-
-                idx = player->nxt;
             }
         }
     }
@@ -4057,7 +4072,7 @@ RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
     *pTournamentIdx = tournament_idx;
 
     // Outer container with accent bar
-    CLAY(CLAY_IDI("PlayerEventRowOuter", tournament_idx), {
+    CLAY(CLAY_IDI("PD_EnrolledOuter", tournament_idx), {
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
@@ -4065,7 +4080,7 @@ RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
         .cornerRadius = CLAY_CORNER_RADIUS(10)
     }) {
         // Left accent bar
-        CLAY(CLAY_IDI("PlayerEventAccent", tournament_idx), {
+        CLAY(CLAY_IDI("PD_EnrolledAccent", tournament_idx), {
             .layout = {
                 .sizing = {.width = CLAY_SIZING_FIXED(6), .height = CLAY_SIZING_GROW(0)}
             },
@@ -4074,7 +4089,7 @@ RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
         }) {}
 
         // Main content
-        CLAY(CLAY_IDI("PlayerEventRow", tournament_idx), {
+        CLAY(CLAY_IDI("PD_EnrolledRow", tournament_idx), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
@@ -4086,20 +4101,20 @@ RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
             .cornerRadius = { 0, 10, 10, 0 }
         }) {
             // Event info (clickable area for navigation)
-            CLAY(CLAY_IDI("PlayerEventInfo", tournament_idx), {
+            CLAY(CLAY_IDI("PD_EnrolledInfo", tournament_idx), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
                     .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                     .padding = { 4, 4, 4, 4 },
                     .childGap = 4
                 },
-                .backgroundColor = Clay_Hovered() ? playerRowHoverColor : (Clay_Color){ 0, 0, 0, 0 },
+                .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
                 .cornerRadius = CLAY_CORNER_RADIUS(6)
             }) {
                 Clay_OnHover(HandlePlayerEventRowClick, pTournamentIdx);
 
                 // Event name row with status badge
-                CLAY(CLAY_IDI("PlayerEventNameRow", tournament_idx), {
+                CLAY(CLAY_IDI("PD_EnrolledName", tournament_idx), {
                     .layout = {
                         .layoutDirection = CLAY_LEFT_TO_RIGHT,
                         .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_FIT(0)},
@@ -4113,7 +4128,7 @@ RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
                         .textColor = dashStatNumber
                     }));
                     // Status badge
-                    CLAY(CLAY_IDI("PlayerEventStatus", tournament_idx), {
+                    CLAY(CLAY_IDI("PD_EnrolledBadge", tournament_idx), {
                         .layout = {
                             .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_FIT(0)},
                             .padding = { 8, 8, 3, 3 }
@@ -4139,7 +4154,7 @@ RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
             // Right: Unregister button (only active during registration phase)
             if (can_unregister)
             {
-                CLAY(CLAY_IDI("PlayerEventUnregBtn", tournament_idx), {
+                CLAY(CLAY_IDI("PD_EnrolledUnreg", tournament_idx), {
                     .layout = {
                         .sizing = {.width = CLAY_SIZING_FIXED(32), .height = CLAY_SIZING_FIXED(32)},
                         .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
@@ -4158,7 +4173,7 @@ RenderPlayerEventRow(u32 tournament_idx, u32 player_idx)
             else
             {
                 // Disabled unregister button (grayed out)
-                CLAY(CLAY_IDI("PlayerEventUnregBtnDisabled", tournament_idx), {
+                CLAY(CLAY_IDI("PD_EnrolledUnregDis", tournament_idx), {
                     .layout = {
                         .sizing = {.width = CLAY_SIZING_FIXED(32), .height = CLAY_SIZING_FIXED(32)},
                         .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
@@ -4182,6 +4197,29 @@ RenderAvailableEventRow(u32 tournament_idx, u32 player_idx)
 {
     Event *tournament = data.tournaments.events + tournament_idx;
 
+    // Determine phase color and label (matching enrolled events style)
+    Clay_Color statusColor;
+    Clay_String statusLabel;
+    switch (tournament->phase)
+    {
+        case PHASE_REGISTRATION:
+            statusColor = dashAccentTeal;
+            statusLabel = CLAY_STRING("Iscrizioni");
+            break;
+        case PHASE_GROUP:
+            statusColor = dashAccentOrange;
+            statusLabel = CLAY_STRING("Gruppi");
+            break;
+        case PHASE_KNOCKOUT:
+            statusColor = dashAccentPurple;
+            statusLabel = CLAY_STRING("Eliminazione");
+            break;
+        case PHASE_FINISHED:
+            statusColor = dashAccentGold;
+            statusLabel = CLAY_STRING("Completato");
+            break;
+    }
+
     // Get format label
     Clay_String formatLabel;
     if (tournament->format == FORMAT_KNOCKOUT)
@@ -4193,29 +4231,39 @@ RenderAvailableEventRow(u32 tournament_idx, u32 player_idx)
         formatLabel = CLAY_STRING("Gruppi + Eliminazione");
     }
 
+    bool can_enroll = (tournament->phase == PHASE_REGISTRATION);
+
     // Encode both indices for the handler
     intptr_t *pEncoded = push_array(data.frameArena, intptr_t, 1);
     *pEncoded = (intptr_t)player_idx | ((intptr_t)tournament_idx << 16);
 
+    u32 *pTournamentIdx = push_array(data.frameArena, u32, 1);
+    *pTournamentIdx = tournament_idx;
+
     // Outer container with accent bar (matching enrolled events style)
-    CLAY(CLAY_IDI("AvailableEventRowOuter", tournament_idx), {
+    CLAY(CLAY_IDI("PD_AvailOuter", tournament_idx), {
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
         },
         .cornerRadius = CLAY_CORNER_RADIUS(10)
     }) {
-        // Left accent bar (dashed style using lighter color to indicate "not yet enrolled")
-        CLAY(CLAY_IDI("AvailEventAccent", tournament_idx), {
+        // Left accent bar (lighter version of status color)
+        CLAY(CLAY_IDI("PD_AvailAccent", tournament_idx), {
             .layout = {
                 .sizing = {.width = CLAY_SIZING_FIXED(6), .height = CLAY_SIZING_GROW(0)}
             },
-            .backgroundColor = { 200, 230, 220, 255 },
+            .backgroundColor = {
+                (u8)(statusColor.r + (255 - statusColor.r) / 2),
+                (u8)(statusColor.g + (255 - statusColor.g) / 2),
+                (u8)(statusColor.b + (255 - statusColor.b) / 2),
+                255
+            },
             .cornerRadius = { 10, 0, 0, 10 }
         }) {}
 
         // Main content
-        CLAY(CLAY_IDI("AvailableEventRow", tournament_idx), {
+        CLAY(CLAY_IDI("PD_AvailRow", tournament_idx), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
@@ -4226,17 +4274,21 @@ RenderAvailableEventRow(u32 tournament_idx, u32 player_idx)
             .backgroundColor = playerRowColor,
             .cornerRadius = { 0, 10, 10, 0 }
         }) {
-            // Event info (display only - no click action)
-            CLAY(CLAY_IDI("AvailEventInfo", tournament_idx), {
+            // Event info (clickable area for navigation)
+            CLAY(CLAY_IDI("PD_AvailInfo", tournament_idx), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
                     .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)},
                     .padding = { 4, 4, 4, 4 },
                     .childGap = 4
-                }
+                },
+                .backgroundColor = Clay_Hovered() ? playerRowHoverColor : (Clay_Color){ 0, 0, 0, 0 },
+                .cornerRadius = CLAY_CORNER_RADIUS(6)
             }) {
-                // Event name row
-                CLAY(CLAY_IDI("AvailEventNameRow", tournament_idx), {
+                Clay_OnHover(HandlePlayerEventRowClick, pTournamentIdx);
+
+                // Event name row with status badge
+                CLAY(CLAY_IDI("PD_AvailName", tournament_idx), {
                     .layout = {
                         .layoutDirection = CLAY_LEFT_TO_RIGHT,
                         .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_FIT(0)},
@@ -4249,19 +4301,19 @@ RenderAvailableEventRow(u32 tournament_idx, u32 player_idx)
                         .fontSize = 15,
                         .textColor = dashLabelText
                     }));
-                    // "Available" badge
-                    CLAY(CLAY_IDI("AvailEventBadge", tournament_idx), {
+                    // Status badge (same as enrolled events)
+                    CLAY(CLAY_IDI("PD_AvailBadge", tournament_idx), {
                         .layout = {
                             .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_FIT(0)},
                             .padding = { 8, 8, 3, 3 }
                         },
-                        .backgroundColor = { 200, 230, 220, 255 },
+                        .backgroundColor = statusColor,
                         .cornerRadius = CLAY_CORNER_RADIUS(8)
                     }) {
-                        CLAY_TEXT(CLAY_STRING("Disponibile"), CLAY_TEXT_CONFIG({
+                        CLAY_TEXT(statusLabel, CLAY_TEXT_CONFIG({
                             .fontId = FONT_ID_BODY_16,
                             .fontSize = 9,
-                            .textColor = { 60, 140, 100, 255 }
+                            .textColor = COLOR_WHITE
                         }));
                     }
                 }
@@ -4273,21 +4325,42 @@ RenderAvailableEventRow(u32 tournament_idx, u32 player_idx)
                 }));
             }
 
-            // Right: Add button (clickable area for enrollment)
-            CLAY(CLAY_IDI("AvailEventAddBtn", tournament_idx), {
-                .layout = {
-                    .sizing = {.width = CLAY_SIZING_FIXED(32), .height = CLAY_SIZING_FIXED(32)},
-                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
-                },
-                .backgroundColor = Clay_Hovered() ? dashAccentTeal : addButtonColor,
-                .cornerRadius = CLAY_CORNER_RADIUS(16)
-            }) {
-                Clay_OnHover(HandleEnrollPlayerFromDetail, pEncoded);
-                CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
-                    .fontId = FONT_ID_BODY_16,
-                    .fontSize = 18,
-                    .textColor = COLOR_WHITE
-                }));
+            // Right: Add button (active or disabled based on phase)
+            if (can_enroll)
+            {
+                CLAY(CLAY_IDI("PD_AvailAdd", tournament_idx), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_FIXED(32), .height = CLAY_SIZING_FIXED(32)},
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? dashAccentTeal : addButtonColor,
+                    .cornerRadius = CLAY_CORNER_RADIUS(16)
+                }) {
+                    Clay_OnHover(HandleEnrollPlayerFromDetail, pEncoded);
+                    CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 18,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+            else
+            {
+                // Disabled add button (grayed out - tournament not in registration phase)
+                CLAY(CLAY_IDI("PD_AvailAddDis", tournament_idx), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_FIXED(32), .height = CLAY_SIZING_FIXED(32)},
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                    },
+                    .backgroundColor = { 235, 235, 235, 255 },
+                    .cornerRadius = CLAY_CORNER_RADIUS(16)
+                }) {
+                    CLAY_TEXT(CLAY_STRING("+"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 18,
+                        .textColor = { 190, 190, 190, 255 }
+                    }));
+                }
             }
         }
     }
@@ -4488,7 +4561,6 @@ RenderPlayerDetail(u32 player_idx)
                     .cornerRadius = CLAY_CORNER_RADIUS(12)
                 }) {
                     // Iterate through all events and show ones player is NOT enrolled in
-                    // Only show events still in registration phase
                     u32 idx_tail = data.tournaments.len - 1;
                     u32 idx = data.tournaments.events->nxt;
                     u32 available_count = 0;
@@ -4496,9 +4568,9 @@ RenderPlayerDetail(u32 player_idx)
                     while (idx != idx_tail)
                     {
                         Event *tournament = data.tournaments.events + idx;
-                        // Check if player is NOT registered and tournament is in registration phase
+                        // Check if player is NOT registered to this tournament
                         bool is_registered = (player->registrations >> idx) & 1;
-                        if (!is_registered && tournament->phase == PHASE_REGISTRATION)
+                        if (!is_registered)
                         {
                             RenderAvailableEventRow(idx, player_idx);
                             available_count++;
@@ -4602,7 +4674,6 @@ RenderPlayers(void)
                 .padding = { 8, 8, 8, 8 }
             },
             .backgroundColor = dashBgGradientTop,
-            .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
         }) {
             RenderPlayersBanner();
             RenderPlayersHeader();

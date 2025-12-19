@@ -103,6 +103,7 @@ main(void)
         Clay_UpdateScrollContainers(true, (Clay_Vector2) { scrollDelta.x, scrollDelta.y }, GetFrameTime());
 
         Clay_RenderCommandArray renderCommands = CreateLayout();
+        int a = 1;
 
         BeginDrawing();
         ClearBackground(BLACK);
