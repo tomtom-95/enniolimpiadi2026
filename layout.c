@@ -1030,6 +1030,54 @@ HandleConfirmScoreModal(Clay_ElementId elementId, Clay_PointerData pointerData, 
     }
 }
 
+void
+HandleToggleGroupsPanel(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    (void)elementId;
+    (void)userData;
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        if (data.groupsPanelVisible)
+        {
+            // Trying to hide groups - only allow if knockout is visible
+            if (data.knockoutPanelVisible)
+            {
+                data.groupsPanelVisible = false;
+            }
+        }
+        else
+        {
+            // Show groups
+            data.groupsPanelVisible = true;
+        }
+    }
+}
+
+void
+HandleToggleKnockoutPanel(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData)
+{
+    (void)elementId;
+    (void)userData;
+    data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
+    if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
+    {
+        if (data.knockoutPanelVisible)
+        {
+            // Trying to hide knockout - only allow if groups is visible
+            if (data.groupsPanelVisible)
+            {
+                data.knockoutPanelVisible = false;
+            }
+        }
+        else
+        {
+            // Show knockout
+            data.knockoutPanelVisible = true;
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Texbox functions
 
@@ -1960,6 +2008,115 @@ RenderRegistrationPanel(u32 tournament_idx, Event *tournament,
                 }
             }
         }
+
+        // VIEW section - toggle visibility of Groups and Knockout panels
+        CLAY(CLAY_ID("ViewSectionHeader"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 0, 0, 8, 0 }
+            }
+        }) {
+            CLAY_TEXT(CLAY_STRING("VIEW"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 10,
+                .textColor = dashLabelText
+            }));
+        }
+
+        // Compute styles for toggle buttons
+        bool groupsActive = data.groupsPanelVisible;
+        bool knockoutActive = data.knockoutPanelVisible;
+
+        CLAY(CLAY_ID("ViewToggleRow"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                .childGap = 8
+            }
+        }) {
+            // Groups toggle button
+            if (groupsActive)
+            {
+                CLAY(CLAY_ID("ToggleGroupsButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[0] : groupAccentColors[0],
+                    .cornerRadius = CLAY_CORNER_RADIUS(6)
+                }) {
+                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+            else
+            {
+                CLAY(CLAY_ID("ToggleGroupsButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
+                    .cornerRadius = CLAY_CORNER_RADIUS(6),
+                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+                }) {
+                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                }
+            }
+
+            // Knockout toggle button
+            if (knockoutActive)
+            {
+                CLAY(CLAY_ID("ToggleKnockoutButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[1] : groupAccentColors[1],
+                    .cornerRadius = CLAY_CORNER_RADIUS(6)
+                }) {
+                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+            else
+            {
+                CLAY(CLAY_ID("ToggleKnockoutButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
+                    .cornerRadius = CLAY_CORNER_RADIUS(6),
+                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+                }) {
+                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                }
+            }
+        }
     }
 
     // Show "Start Tournament" button if we have enough players
@@ -2345,6 +2502,115 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                 }
             }
         }
+
+        // VIEW section - toggle visibility of Groups and Knockout panels
+        CLAY(CLAY_ID("ViewSectionHeader"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                .padding = { 0, 0, 8, 0 }
+            }
+        }) {
+            CLAY_TEXT(CLAY_STRING("VIEW"), CLAY_TEXT_CONFIG({
+                .fontId = FONT_ID_BODY_16,
+                .fontSize = 10,
+                .textColor = dashLabelText
+            }));
+        }
+
+        // Compute styles for toggle buttons
+        bool groupsActive = data.groupsPanelVisible;
+        bool knockoutActive = data.knockoutPanelVisible;
+
+        CLAY(CLAY_ID("ViewToggleRow"), {
+            .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                .childGap = 8
+            }
+        }) {
+            // Groups toggle button
+            if (groupsActive)
+            {
+                CLAY(CLAY_ID("ToggleGroupsButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[0] : groupAccentColors[0],
+                    .cornerRadius = CLAY_CORNER_RADIUS(6)
+                }) {
+                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+            else
+            {
+                CLAY(CLAY_ID("ToggleGroupsButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
+                    .cornerRadius = CLAY_CORNER_RADIUS(6),
+                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+                }) {
+                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                }
+            }
+
+            // Knockout toggle button
+            if (knockoutActive)
+            {
+                CLAY(CLAY_ID("ToggleKnockoutButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[1] : groupAccentColors[1],
+                    .cornerRadius = CLAY_CORNER_RADIUS(6)
+                }) {
+                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = COLOR_WHITE
+                    }));
+                }
+            }
+            else
+            {
+                CLAY(CLAY_ID("ToggleKnockoutButton"), {
+                    .layout = {
+                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
+                        .padding = { 8, 8, 6, 6 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                    },
+                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
+                    .cornerRadius = CLAY_CORNER_RADIUS(6),
+                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
+                }) {
+                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
+                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
+                        .fontId = FONT_ID_BODY_16,
+                        .fontSize = 12,
+                        .textColor = dashLabelText
+                    }));
+                }
+            }
+        }
     }
 
     // Players card
@@ -2709,7 +2975,6 @@ RenderKnockoutChart(u8 *bracket, u32 num_players)
             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
             .padding = { 16, 16, 16, 16 }
         },
-        .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
     }) {
         Clay_OnHover(HandleZoomableHover, &data.chartZoomLevel);
 
@@ -2725,7 +2990,8 @@ RenderKnockoutChart(u8 *bracket, u32 num_players)
             .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) } },
             .floating = {
                 .attachTo = CLAY_ATTACH_TO_PARENT,
-                .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_PASSTHROUGH
+                .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_PASSTHROUGH,
+                .clipTo = CLAY_CLIP_TO_ATTACHED_PARENT
             },
             .custom = { .customData = &bracketConnectionsElement }
         }) {}
@@ -3026,6 +3292,10 @@ RenderGroupsKnockoutChart(Event *tournament)
     // Calculate number of qualifiers for the bracket
     u32 num_qualifiers = num_groups * tournament->group_phase.advance_per_group;
 
+    // Determine sizing based on which panels are visible
+    bool showGroups = data.groupsPanelVisible;
+    bool showKnockout = data.knockoutPanelVisible && (num_qualifiers >= 2);
+
     // Main container: groups on left, knockout bracket on right
     CLAY(CLAY_ID("GroupsAndBracketContainer"), {
         .layout = {
@@ -3033,138 +3303,146 @@ RenderGroupsKnockoutChart(Event *tournament)
             .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
             .childGap = 32,
             .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_TOP }
-        }
+        },
+        .clip = { .vertical = true, .horizontal = true, .childOffset = Clay_GetScrollOffset() }
     }) {
         // Left side: Groups stacked vertically with styled container
-        CLAY(CLAY_ID("GroupsContainerOuter"), {
-            .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = { .width = CLAY_SIZING_FIT(GetScreenWidth() * 0.4f), .height = CLAY_SIZING_FIT(0) }
-            },
-            .cornerRadius = CLAY_CORNER_RADIUS(12)
-        }) {
-            // Teal accent bar for groups section
-            CLAY(CLAY_ID("GroupsAccentBar"), {
-                .layout = {
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
-                },
-                .backgroundColor = dashAccentTeal,
-                .cornerRadius = { 12, 12, 0, 0 }
-            }) {}
+        if (showGroups)
+        {
+            // Use grow sizing if knockout is hidden, otherwise use fit with percentage
+            Clay_Sizing groupsSizing = showKnockout
+                ? (Clay_Sizing){ .width = CLAY_SIZING_FIT(GetScreenWidth() * 0.4f), .height = CLAY_SIZING_FIT(0) }
+                : (Clay_Sizing){ .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) };
 
-            // Groups header
-            CLAY(CLAY_ID("GroupsHeader"), {
-                .layout = {
-                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                    .padding = { 16, 16, 12, 12 },
-                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
-                },
-                .backgroundColor = { 245, 250, 250, 255 }
-            }) {
-                CLAY(CLAY_ID("GroupsHeaderBadge"), {
-                    .layout = {
-                        .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-                        .padding = { 12, 12, 8, 8 }
-                    },
-                    .backgroundColor = dashAccentTeal,
-                    .cornerRadius = CLAY_CORNER_RADIUS(8)
-                }) {
-                    CLAY_TEXT(CLAY_STRING("GROUP STAGE"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_PRESS_START_2P,
-                        .fontSize = 14,
-                        .textColor = COLOR_WHITE
-                    }));
-                }
-            }
-
-            // Groups content
-            CLAY(CLAY_ID("GroupsContainer"), {
+            CLAY(CLAY_ID("GroupsContainerOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
-                    .childGap = 16,
-                    .padding = { 16, 16, 16, 16 }
+                    .sizing = groupsSizing
                 },
-                .backgroundColor = { 245, 250, 250, 255 },
-                .cornerRadius = { 0, 0, 12, 12 },
-                .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
+                .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
-                for (u32 g = 0; g < num_groups; g++)
-                {
-                    // Count actual players in this group
-                    u32 players_in_group = 0;
-                    for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
-                    {
-                        if (tournament->group_phase.groups[g][slot] != 0)
-                        {
-                            players_in_group++;
-                        }
-                    }
+                // Teal accent bar for groups section
+                CLAY(CLAY_ID("GroupsAccentBar"), {
+                    .layout = {
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
+                    },
+                    .backgroundColor = dashAccentTeal,
+                    .cornerRadius = { 12, 12, 0, 0 }
+                }) {}
 
-                    Clay_Color groupAccent = groupAccentColors[g % numAccentColors];
-
-                    // Outer container with accent bar
-                    CLAY(CLAY_IDI("GroupOuter", g), {
+                // Groups header
+                CLAY(CLAY_ID("GroupsHeader"), {
+                    .layout = {
+                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                        .padding = { 16, 16, 12, 12 },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                    },
+                    .backgroundColor = { 245, 250, 250, 255 }
+                }) {
+                    CLAY(CLAY_ID("GroupsHeaderBadge"), {
                         .layout = {
-                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
+                            .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                            .padding = { 12, 12, 8, 8 }
                         },
-                        .cornerRadius = CLAY_CORNER_RADIUS(12),
+                        .backgroundColor = dashAccentTeal,
+                        .cornerRadius = CLAY_CORNER_RADIUS(8)
                     }) {
-                        // Colored accent bar at top
-                        CLAY(CLAY_IDI("GroupAccent", g), {
-                            .layout = {
-                                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
-                            },
-                            .backgroundColor = groupAccent,
-                            .cornerRadius = { 12, 12, 0, 0 }
-                        }) {}
+                        CLAY_TEXT(CLAY_STRING("GROUP STAGE"), CLAY_TEXT_CONFIG({
+                            .fontId = FONT_ID_PRESS_START_2P,
+                            .fontSize = 14,
+                            .textColor = COLOR_WHITE
+                        }));
+                    }
+                }
 
-                        // Group content card
-                        CLAY(CLAY_IDI("Group", g), {
+                // Groups content
+                CLAY(CLAY_ID("GroupsContainer"), {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
+                        .childGap = 16,
+                        .padding = { 16, 16, 16, 16 }
+                    },
+                    .backgroundColor = { 245, 250, 250, 255 },
+                    .cornerRadius = { 0, 0, 12, 12 },
+                }) {
+                    for (u32 g = 0; g < num_groups; g++)
+                    {
+                        // Count actual players in this group
+                        u32 players_in_group = 0;
+                        for (u32 slot = 0; slot < MAX_GROUP_SIZE; slot++)
+                        {
+                            if (tournament->group_phase.groups[g][slot] != 0)
+                            {
+                                players_in_group++;
+                            }
+                        }
+
+                        Clay_Color groupAccent = groupAccentColors[g % numAccentColors];
+
+                        // Outer container with accent bar
+                        CLAY(CLAY_IDI("GroupOuter", g), {
                             .layout = {
                                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
-                                .padding = { 16, 16, 16, 16 },
-                                .childGap = 12,
-                                .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                                .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) }
                             },
-                            .backgroundColor = dashCardBg,
-                            .cornerRadius = { 0, 0, 12, 12 }
+                            .cornerRadius = CLAY_CORNER_RADIUS(12),
                         }) {
-                            // Group header with styled badge - clickable to toggle matrix
-                            CLAY(CLAY_IDI("GroupHeader", g), {
+                            // Colored accent bar at top
+                            CLAY(CLAY_IDI("GroupAccent", g), {
                                 .layout = {
-                                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
-                                    .padding = { 12, 12, 8, 8 },
-                                    .childGap = 8,
-                                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(6) }
                                 },
                                 .backgroundColor = groupAccent,
-                                .cornerRadius = CLAY_CORNER_RADIUS(8)
-                            }) {
-                                String8 group_prefix = str8_lit("GROUP ");
-                                String8 group_num = str8_from_u32(data.frameArena, g + 1);
-                                String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
-                                CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
-                                    .fontId = FONT_ID_PRESS_START_2P,
-                                    .fontSize = 16,
-                                    .textColor = COLOR_WHITE
-                                }));
-                            }
+                                .cornerRadius = { 12, 12, 0, 0 }
+                            }) {}
 
-                            RenderGroupMatrix(tournament, g, players_in_group);
+                            // Group content card
+                            CLAY(CLAY_IDI("Group", g), {
+                                .layout = {
+                                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                    .sizing = { .width = CLAY_SIZING_FIT(0), .height = CLAY_SIZING_FIT(0) },
+                                    .padding = { 16, 16, 16, 16 },
+                                    .childGap = 12,
+                                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
+                                },
+                                .backgroundColor = dashCardBg,
+                                .cornerRadius = { 0, 0, 12, 12 }
+                            }) {
+                                // Group header with styled badge - clickable to toggle matrix
+                                CLAY(CLAY_IDI("GroupHeader", g), {
+                                    .layout = {
+                                        .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                                        .padding = { 12, 12, 8, 8 },
+                                        .childGap = 8,
+                                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                                    },
+                                    .backgroundColor = groupAccent,
+                                    .cornerRadius = CLAY_CORNER_RADIUS(8)
+                                }) {
+                                    String8 group_prefix = str8_lit("GROUP ");
+                                    String8 group_num = str8_from_u32(data.frameArena, g + 1);
+                                    String8 group_label = str8_cat(data.frameArena, group_prefix, group_num);
+                                    CLAY_TEXT(str8_to_clay(group_label), CLAY_TEXT_CONFIG({
+                                        .fontId = FONT_ID_PRESS_START_2P,
+                                        .fontSize = 16,
+                                        .textColor = COLOR_WHITE
+                                    }));
+                                }
+
+                                RenderGroupMatrix(tournament, g, players_in_group);
+                            }
                         }
                     }
                 }
             }
-        }
+        } // end if (showGroups)
 
-        // Right side: Knockout bracket (always visible)
-        if (num_qualifiers >= 2)
+        // Right side: Knockout bracket
+        if (showKnockout)
         {
             CLAY(CLAY_ID("KnockoutContainerOuter"), {
                 .layout = {

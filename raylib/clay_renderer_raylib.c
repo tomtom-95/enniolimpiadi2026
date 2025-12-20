@@ -275,8 +275,6 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                         Clay_ElementData bracketElementData = Clay_GetElementData(Clay_GetElementId(CLAY_STRING("BracketConnections")));
                         Clay_BoundingBox boundingBox = bracketElementData.boundingBox;
 
-                        BeginScissorMode(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
-
                         // Draw connections for each round after the first
                         for (uint32_t round = 1; round < num_rounds; round++)
                         {
@@ -340,7 +338,6 @@ void Clay_Raylib_Render(Clay_RenderCommandArray renderCommands, Font* fonts)
                                 DrawSplineSegmentBezierCubic(start2, ctrl2_1, ctrl2_2, end, thickness, lineColor);
                             }
                         }
-                        EndScissorMode();
 
                         break;
                     }

@@ -133,6 +133,10 @@ struct LayoutData {
 
     // Duplicate name warning (shown until user interacts with textbox)
     DuplicateWarning duplicateWarning;
+
+    // Panel visibility for Group+Knockout tournaments
+    bool groupsPanelVisible;
+    bool knockoutPanelVisible;
 };
 
 typedef enum
@@ -238,6 +242,8 @@ void HandleDecrementAdvancePerGroup(Clay_ElementId elementId, Clay_PointerData p
 void HandleMatrixCellClick(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData);
 void HandleCancelScoreModal(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData);
 void HandleConfirmScoreModal(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData);
+void HandleToggleGroupsPanel(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData);
+void HandleToggleKnockoutPanel(Clay_ElementId elementId, Clay_PointerData pointerData, void *userData);
 
 ///////////////////////////////////////////////////////////////////////////////
 // TextBox Functions

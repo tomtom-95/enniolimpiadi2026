@@ -78,6 +78,9 @@ main(void)
     data.chartZoomLevel       = 1.0f;
     data.groupMatrixZoomLevel = 1.0f;
 
+    data.groupsPanelVisible   = true;
+    data.knockoutPanelVisible = true;
+
     f64 lastSaveTime = 0;
     while (!WindowShouldClose())
     {
@@ -103,7 +106,6 @@ main(void)
         Clay_UpdateScrollContainers(true, (Clay_Vector2) { scrollDelta.x, scrollDelta.y }, GetFrameTime());
 
         Clay_RenderCommandArray renderCommands = CreateLayout();
-        int a = 1;
 
         BeginDrawing();
         ClearBackground(BLACK);
