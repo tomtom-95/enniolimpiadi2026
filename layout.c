@@ -4436,8 +4436,7 @@ RenderPlayerDetail(u32 player_idx)
                 .y = CLAY_ALIGN_Y_TOP
             },
         },
-        .backgroundColor = dashBgGradientTop,
-        .clip = { .horizontal = true, .vertical = true, .childOffset = Clay_GetScrollOffset() }
+        .backgroundColor = dashBgGradientTop
     }) {
         RenderPlayerGoBackButton();
         RenderPlayerBanner(player_idx);
@@ -4503,7 +4502,8 @@ RenderPlayerDetail(u32 player_idx)
                         .childGap = 8
                     },
                     .backgroundColor = dashCardBg,
-                    .cornerRadius = CLAY_CORNER_RADIUS(12)
+                    .cornerRadius = CLAY_CORNER_RADIUS(12),
+                    .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
                 }) {
                     if (registration_count == 0)
                     {
@@ -4558,7 +4558,8 @@ RenderPlayerDetail(u32 player_idx)
                         .childGap = 8
                     },
                     .backgroundColor = dashCardBg,
-                    .cornerRadius = CLAY_CORNER_RADIUS(12)
+                    .cornerRadius = CLAY_CORNER_RADIUS(12),
+                    .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
                 }) {
                     // Iterate through all events and show ones player is NOT enrolled in
                     u32 idx_tail = data.tournaments.len - 1;
@@ -5342,8 +5343,7 @@ CreateLayout(void)
                 }
             },
             .backgroundColor = headerBackgroundColor,
-            .cornerRadius = CLAY_CORNER_RADIUS(8),
-            .clip = { .horizontal = true, .childOffset = Clay_GetScrollOffset() }
+            .cornerRadius = CLAY_CORNER_RADIUS(8)
         }) {
             RenderHeaderButton(CLAY_STRING("Dashboard"), PAGE_Dashboard);
             RenderHeaderButton(CLAY_STRING("Events"),    PAGE_Events);
