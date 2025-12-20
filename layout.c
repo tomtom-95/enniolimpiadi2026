@@ -1038,19 +1038,7 @@ HandleToggleGroupsPanel(Clay_ElementId elementId, Clay_PointerData pointerData, 
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        if (data.groupsPanelVisible)
-        {
-            // Trying to hide groups - only allow if knockout is visible
-            if (data.knockoutPanelVisible)
-            {
-                data.groupsPanelVisible = false;
-            }
-        }
-        else
-        {
-            // Show groups
-            data.groupsPanelVisible = true;
-        }
+        data.groupsPanelVisible = !data.groupsPanelVisible;
     }
 }
 
@@ -1062,19 +1050,7 @@ HandleToggleKnockoutPanel(Clay_ElementId elementId, Clay_PointerData pointerData
     data.mouseCursor = MOUSE_CURSOR_POINTING_HAND;
     if (pointerData.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME)
     {
-        if (data.knockoutPanelVisible)
-        {
-            // Trying to hide knockout - only allow if groups is visible
-            if (data.groupsPanelVisible)
-            {
-                data.knockoutPanelVisible = false;
-            }
-        }
-        else
-        {
-            // Show knockout
-            data.knockoutPanelVisible = true;
-        }
+        data.knockoutPanelVisible = !data.knockoutPanelVisible;
     }
 }
 
@@ -1460,7 +1436,7 @@ RenderDashboard(void)
             }
 
             // Players card with teal accent
-            CLAY(CLAY_ID("PlayersCardOuter"), {
+            CLAY(CLAY_ID("DashboardPlayersCardOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
                     .sizing = {.height = CLAY_SIZING_FIT(0), .width = CLAY_SIZING_GROW(0)}
@@ -2010,7 +1986,7 @@ RenderRegistrationPanel(u32 tournament_idx, Event *tournament,
         }
 
         // VIEW section - toggle visibility of Groups and Knockout panels
-        CLAY(CLAY_ID("ViewSectionHeader"), {
+        CLAY(CLAY_ID("RegViewSectionHeader"), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
@@ -2022,100 +1998,6 @@ RenderRegistrationPanel(u32 tournament_idx, Event *tournament,
                 .fontSize = 10,
                 .textColor = dashLabelText
             }));
-        }
-
-        // Compute styles for toggle buttons
-        bool groupsActive = data.groupsPanelVisible;
-        bool knockoutActive = data.knockoutPanelVisible;
-
-        CLAY(CLAY_ID("ViewToggleRow"), {
-            .layout = {
-                .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                .childGap = 8
-            }
-        }) {
-            // Groups toggle button
-            if (groupsActive)
-            {
-                CLAY(CLAY_ID("ToggleGroupsButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[0] : groupAccentColors[0],
-                    .cornerRadius = CLAY_CORNER_RADIUS(6)
-                }) {
-                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = COLOR_WHITE
-                    }));
-                }
-            }
-            else
-            {
-                CLAY(CLAY_ID("ToggleGroupsButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
-                    .cornerRadius = CLAY_CORNER_RADIUS(6),
-                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
-                }) {
-                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = dashLabelText
-                    }));
-                }
-            }
-
-            // Knockout toggle button
-            if (knockoutActive)
-            {
-                CLAY(CLAY_ID("ToggleKnockoutButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[1] : groupAccentColors[1],
-                    .cornerRadius = CLAY_CORNER_RADIUS(6)
-                }) {
-                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = COLOR_WHITE
-                    }));
-                }
-            }
-            else
-            {
-                CLAY(CLAY_ID("ToggleKnockoutButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
-                    .cornerRadius = CLAY_CORNER_RADIUS(6),
-                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
-                }) {
-                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = dashLabelText
-                    }));
-                }
-            }
         }
     }
 
@@ -2411,7 +2293,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
     if (tournament->format == FORMAT_GROUP_KNOCKOUT)
     {
         // Read-only group settings info - styled cards
-        CLAY(CLAY_ID("GroupSettingsRow"), {
+        CLAY(CLAY_ID("InProgressGroupSettingsRow"), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
@@ -2419,7 +2301,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
             }
         }) {
             // Group size card
-            CLAY(CLAY_ID("GroupSizeCardOuter"), {
+            CLAY(CLAY_ID("InProgressGroupSizeCardOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
                     .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)}
@@ -2427,7 +2309,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                 .cornerRadius = CLAY_CORNER_RADIUS(8)
             }) {
                 // Accent bar
-                CLAY(CLAY_ID("GroupSizeAccent"), {
+                CLAY(CLAY_ID("InProgressGroupSizeAccent"), {
                     .layout = {
                         .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(4)}
                     },
@@ -2435,7 +2317,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                     .cornerRadius = { 8, 8, 0, 0 }
                 }) {}
                 // Card content
-                CLAY(CLAY_ID("GroupSizeCard"), {
+                CLAY(CLAY_ID("InProgressGroupSizeCard"), {
                     .layout = {
                         .layoutDirection = CLAY_TOP_TO_BOTTOM,
                         .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
@@ -2461,7 +2343,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
             }
 
             // Advance per group card
-            CLAY(CLAY_ID("AdvanceCardOuter"), {
+            CLAY(CLAY_ID("InProgressAdvanceCardOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
                     .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)}
@@ -2469,7 +2351,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                 .cornerRadius = CLAY_CORNER_RADIUS(8)
             }) {
                 // Accent bar
-                CLAY(CLAY_ID("AdvanceAccent"), {
+                CLAY(CLAY_ID("InProgressAdvanceAccent"), {
                     .layout = {
                         .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(4)}
                     },
@@ -2477,7 +2359,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
                     .cornerRadius = { 8, 8, 0, 0 }
                 }) {}
                 // Card content
-                CLAY(CLAY_ID("AdvanceCard"), {
+                CLAY(CLAY_ID("InProgressAdvanceCard"), {
                     .layout = {
                         .layoutDirection = CLAY_TOP_TO_BOTTOM,
                         .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
@@ -2504,7 +2386,7 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
         }
 
         // VIEW section - toggle visibility of Groups and Knockout panels
-        CLAY(CLAY_ID("ViewSectionHeader"), {
+        CLAY(CLAY_ID("InProgressViewSectionHeader"), {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
@@ -2518,103 +2400,10 @@ RenderInProgressPanel(s32 *registered_positions, u32 registered_count)
             }));
         }
 
-        // Compute styles for toggle buttons
-        bool groupsActive = data.groupsPanelVisible;
-        bool knockoutActive = data.knockoutPanelVisible;
-
-        CLAY(CLAY_ID("ViewToggleRow"), {
-            .layout = {
-                .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                .childGap = 8
-            }
-        }) {
-            // Groups toggle button
-            if (groupsActive)
-            {
-                CLAY(CLAY_ID("ToggleGroupsButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[0] : groupAccentColors[0],
-                    .cornerRadius = CLAY_CORNER_RADIUS(6)
-                }) {
-                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = COLOR_WHITE
-                    }));
-                }
-            }
-            else
-            {
-                CLAY(CLAY_ID("ToggleGroupsButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
-                    .cornerRadius = CLAY_CORNER_RADIUS(6),
-                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
-                }) {
-                    Clay_OnHover(HandleToggleGroupsPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Groups"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = dashLabelText
-                    }));
-                }
-            }
-
-            // Knockout toggle button
-            if (knockoutActive)
-            {
-                CLAY(CLAY_ID("ToggleKnockoutButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[1] : groupAccentColors[1],
-                    .cornerRadius = CLAY_CORNER_RADIUS(6)
-                }) {
-                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = COLOR_WHITE
-                    }));
-                }
-            }
-            else
-            {
-                CLAY(CLAY_ID("ToggleKnockoutButton"), {
-                    .layout = {
-                        .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0)},
-                        .padding = { 8, 8, 6, 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER }
-                    },
-                    .backgroundColor = Clay_Hovered() ? playerRowHoverColor : playerRowColor,
-                    .cornerRadius = CLAY_CORNER_RADIUS(6),
-                    .border = { .width = {1, 1, 1, 1}, .color = textInputBorderColor }
-                }) {
-                    Clay_OnHover(HandleToggleKnockoutPanel, NULL);
-                    CLAY_TEXT(CLAY_STRING("Knockout"), CLAY_TEXT_CONFIG({
-                        .fontId = FONT_ID_BODY_16,
-                        .fontSize = 12,
-                        .textColor = dashLabelText
-                    }));
-                }
-            }
-        }
     }
 
     // Players card
-    CLAY(CLAY_ID("PlayersCardOuter"), {
+    CLAY(CLAY_ID("InProgressPlayersCardOuter"), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}
@@ -3300,7 +3089,7 @@ RenderGroupsKnockoutChart(Event *tournament)
     CLAY(CLAY_ID("GroupsAndBracketContainer"), {
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
             .childGap = 32,
             .childAlignment = { .x = CLAY_ALIGN_X_LEFT, .y = CLAY_ALIGN_Y_TOP }
         },
@@ -3314,10 +3103,18 @@ RenderGroupsKnockoutChart(Event *tournament)
                 ? (Clay_Sizing){ .width = CLAY_SIZING_FIT(GetScreenWidth() * 0.4f), .height = CLAY_SIZING_FIT(0) }
                 : (Clay_Sizing){ .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) };
 
+            // Horizontal container for Groups panel + hide strip
+            CLAY(CLAY_ID("GroupsPanelRow"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = groupsSizing,
+                    .childGap = 0
+                }
+            }) {
             CLAY(CLAY_ID("GroupsContainerOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    .sizing = groupsSizing
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) }
                 },
                 .cornerRadius = CLAY_CORNER_RADIUS(12)
             }) {
@@ -3439,11 +3236,108 @@ RenderGroupsKnockoutChart(Event *tournament)
                     }
                 }
             }
+
+            // Hide Groups strip - vertical strip on right edge
+            CLAY(CLAY_ID("HideGroupsStrip"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = { .width = CLAY_SIZING_FIXED(32), .height = CLAY_SIZING_GROW(0) },
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[0] : groupAccentColors[0],
+                .cornerRadius = CLAY_CORNER_RADIUS(8)
+            }) {
+                Clay_OnHover(HandleToggleGroupsPanel, NULL);
+                CLAY_TEXT(CLAY_STRING("<"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 20,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+            } // end GroupsPanelRow
         } // end if (showGroups)
+        else
+        {
+            // Collapsed Groups indicator - vertical strip taking full height
+            CLAY(CLAY_ID("CollapsedGroupsIndicator"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = { .width = CLAY_SIZING_FIXED(36), .height = CLAY_SIZING_GROW(0) },
+                    .padding = { 8, 8, 12, 12 },
+                    .childGap = 4,
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[0] : groupAccentColors[0],
+                .cornerRadius = CLAY_CORNER_RADIUS(8)
+            }) {
+                Clay_OnHover(HandleToggleGroupsPanel, NULL);
+                CLAY_TEXT(CLAY_STRING(">"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 16,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("G"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("R"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("O"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("U"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("P"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("S"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+        }
 
         // Right side: Knockout bracket
         if (showKnockout)
         {
+            // Horizontal container for hide strip + Knockout panel
+            CLAY(CLAY_ID("KnockoutPanelRow"), {
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
+                    .childGap = 0
+                }
+            }) {
+            // Hide Knockout strip - vertical strip on left edge
+            CLAY(CLAY_ID("HideKnockoutStrip"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = { .width = CLAY_SIZING_FIXED(32), .height = CLAY_SIZING_GROW(0) },
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[1] : groupAccentColors[1],
+                .cornerRadius = CLAY_CORNER_RADIUS(8)
+            }) {
+                Clay_OnHover(HandleToggleKnockoutPanel, NULL);
+                CLAY_TEXT(CLAY_STRING(">"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 20,
+                    .textColor = COLOR_WHITE
+                }));
+            }
+
             CLAY(CLAY_ID("KnockoutContainerOuter"), {
                 .layout = {
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -3497,6 +3391,69 @@ RenderGroupsKnockoutChart(Event *tournament)
                 }) {
                     RenderKnockoutChart(tournament->group_phase.bracket, num_qualifiers);
                 }
+            }
+            } // end KnockoutPanelRow
+        }
+        else if (num_qualifiers >= 2)
+        {
+            // Collapsed Knockout indicator - vertical strip taking full height
+            CLAY(CLAY_ID("CollapsedKnockoutIndicator"), {
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    .sizing = { .width = CLAY_SIZING_FIXED(36), .height = CLAY_SIZING_GROW(0) },
+                    .padding = { 8, 8, 12, 12 },
+                    .childGap = 4,
+                    .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER }
+                },
+                .backgroundColor = Clay_Hovered() ? groupAccentColorsHover[1] : groupAccentColors[1],
+                .cornerRadius = CLAY_CORNER_RADIUS(8)
+            }) {
+                Clay_OnHover(HandleToggleKnockoutPanel, NULL);
+                CLAY_TEXT(CLAY_STRING("<"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_BODY_16,
+                    .fontSize = 16,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("K"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("N"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("O"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("C"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("K"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("O"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("U"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
+                CLAY_TEXT(CLAY_STRING("T"), CLAY_TEXT_CONFIG({
+                    .fontId = FONT_ID_PRESS_START_2P,
+                    .fontSize = 12,
+                    .textColor = COLOR_WHITE
+                }));
             }
         }
     }

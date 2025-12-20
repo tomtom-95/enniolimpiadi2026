@@ -36,7 +36,7 @@ main(void)
     MaximizeWindow();
 
     // Increased with respect to the default
-    Clay_SetMaxElementCount(16384);
+    Clay_SetMaxElementCount(32768);
 
     uint64_t clayRequiredMemory = Clay_MinMemorySize();
     Clay_Arena clayMemory = Clay_CreateArenaWithCapacityAndMemory(clayRequiredMemory, malloc(clayRequiredMemory));
@@ -56,7 +56,7 @@ main(void)
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, fonts);
 
-    Clay_SetDebugModeEnabled(true);
+    Clay_SetDebugModeEnabled(false);
 
     Arena *arena = arena_alloc(MegaByte(10));
 
